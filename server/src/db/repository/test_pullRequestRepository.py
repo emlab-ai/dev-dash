@@ -1,0 +1,90 @@
+import unittest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from db.repository import PullRequestRepository
+from db.model import PullRequest
+
+class PullRequestRepositoryTests(unittest.TestCase):
+    def setUp(self):
+        # Create an in-memory SQLite database for testing
+        self.engine = create_engine('sqlite:///:memory:')
+        PullRequest.metadata.create_all(self.engine)
+        self.session = sessionmaker(bind=self.engine)()
+        self.repository = PullRequestRepository(self.session)
+
+    def tearDown(self):
+        # Close the database connection after each test
+        self.session.close()
+        self.engine.dispose()
+
+
+    def test_get_git_stats(self):
+        # Test retrieving existing git stats
+        git_stats = PullRequest(...)
+        self.session.add(git_stats)
+        self.session.commit()
+
+        retrieved_git_stats = self.repository.get(git_stats.id)
+        self.assertIsNotNone(retrieved_git_stats)
+        self.assertEqual(retrieved_git_stats..., ...)
+
+    def test_list_all_git_stats_with_after(self):
+        # Test listing all git stats with 'after' cursor
+        # Insert at least 20 test git stats
+        for i in range(20):
+            git_stats = PullRequest(...)
+            self.session.add(git_stats)
+        self.session.commit()
+
+        limit = 10
+        after = 5
+
+        result = self.repository.list_all(limit, after=after)
+
+        self.assertEqual(len(result.data), limit)
+        self.assertEqual(result.before, ...)
+        self.assertEqual(result.after, ...)
+
+    def test_list_all_git_stats_with_before(self):
+        # Test listing all git stats with 'before' cursor
+        # Insert at least 20 test git stats
+        for i in range(20):
+            git_stats = PullRequest(...)
+            self.session.add(git_stats)
+        self.session.commit()
+
+        limit = 10
+        before = 15
+
+        result = self.repository.list_all(limit, before=before)
+
+        self.assertEqual(len(result.data), limit)
+        self.assertEqual(result.before, ...)
+        self.assertEqual(result.after, ...)
+
+    def test_update_git_stats(self):
+        # Test updating existing git stats
+        git_stats = PullRequest(...)
+        self.session.add(git_stats)
+        self.session.commit()
+
+        git_stats = PullRequest(...)
+        self.repository.update(git_stats)
+
+        updated_git_stats = self.session.query(PullRequest).filter_by(id=git_stats.id).first()
+        self.assertIsNotNone(updated_git_stats)
+        self.assertEqual(updated_git_stats..., ...)
+
+    def test_delete_git_stats(self):
+        # Test deleting existing git stats
+        git_stats = PullRequest(...)
+        self.session.add(git_stats)
+        self.session.commit()
+
+        self.repository.delete(git_stats.id)
+
+        deleted_git_stats = self.session.query(PullRequest).filter_by(id=git_stats.id).first()
+        self.assertIsNone(deleted_git_stats)
+
+if __name__ == '__main__':
+    unittest.main()

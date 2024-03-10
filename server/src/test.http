@@ -1,0 +1,30 @@
+###
+GET http://127.0.0.1:8080/api/stats?end_date=2023-12-31&managerId=2
+content-type: application/json
+
+
+###
+
+POST http://127.0.0.1:8080/api/users
+content-type: application/json
+    
+{
+    "name": "John Doe",
+    "email": "joh@mail.com",
+    "isManager": false,
+    "teamId": 10
+}
+
+
+
+###
+GET http://127.0.0.1:8080/api/users?page_size=3&before=6
+content-type: application/json
+
+
+###
+GET http://127.0.0.1:8080/api/git/prs?page_size=30
+content-type: application/json
+
+
+
