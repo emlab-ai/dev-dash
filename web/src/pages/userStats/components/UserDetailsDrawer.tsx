@@ -1,4 +1,5 @@
 import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel } from "@chakra-ui/react";
+import Pager from "@src/components/Pager";
 import PullRequestTable from "@src/components/PullRequestTable";
 import { UserDetailsProvider, useUserDetailsContext } from "@src/providers/userDetailsViewModel";
 import { Bar } from 'react-chartjs-2';
@@ -42,7 +43,14 @@ function UserDetailsDrawerContent({isOpen, onClose, userId}: UserDetailsDrawerPr
 }
 
 function UserDetailsContent() {
-    var {user, userPrsChart} = useUserDetailsContext();
+    var {
+        userPrsChart, 
+        pullRequests,
+        nextPullReqestPage,
+        prevPullReqestPage,
+        hasNextPullReqestPage,
+        hasPrevPullReqestPage
+    } = useUserDetailsContext();
     const chartData = {
         labels: userPrsChart?.labels,
         datasets: [
@@ -86,14 +94,15 @@ function UserDetailsContent() {
                     <h2>
                         <AccordionButton>
                             <Box flex="1" textAlign="left">
-                                PRs
+                                Pull Requests
                             </Box>
                             <AccordionIcon />
                         </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
                         {/* Content for PRs tab */}
-                        <PullRequestTable data={[{title:"test", gitAlias:"test", additions: 1000, deletions: 300}]}></PullRequestTable>
+                        <PullRequestTable data={pullRequests}></PullRequestTable>
+                        <Pager nextPage={nextPullReqestPage} prevPage={prevPullReqestPage} hasNext={hasNextPullReqestPage} hasPrev={hasPrevPullReqestPage} />
                     </AccordionPanel>
                 </AccordionItem>
                 <AccordionItem>

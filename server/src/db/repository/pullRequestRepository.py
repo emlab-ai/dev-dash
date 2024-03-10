@@ -51,7 +51,7 @@ class PullRequestRepository:
                 raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
             
             query = self.session.query(PullRequest)
-            total_count = query.count()
+            
             query = query.filter(func.date(PullRequest.closedAt) >= start_date.date(), func.date(PullRequest.closedAt) <= end_date.date())
             query = query.join(User, PullRequest.authorId == User.id)
             if(managers_ids is not None):
@@ -60,6 +60,8 @@ class PullRequestRepository:
             if (users_ids is not None):
                 query = query.filter(User.id.in_(users_ids))
             
+            total_count = query.count()
+
             if after:
                 query = query.filter(PullRequest.id > after)
                 query = query.order_by(PullRequest.id.asc())
@@ -72,7 +74,33 @@ class PullRequestRepository:
             if limit:
                 query = query.limit(limit+1)
 
+            query = query.with_entities(
+                PullRequest.id, 
+                PullRequest.author,
+                PullRequest.authorId,
+                PullRequest.prId,
+                PullRequest.number,
+                PullRequest.closedAt,
+                PullRequest.createdAt,
+                PullRequest.changedFiles,
+                PullRequest.deletions,
+                PullRequest.additions,
+                PullRequest.bodyText,
+                PullRequest.title,
+                PullRequest.commitsCount,
+                PullRequest.firstCommitMessage,
+                PullRequest.firstCommitDate,
+                PullRequest.repositoryName,
+                PullRequest.repositoryUrl,
+                PullRequest.reviewThreadsCount,
+                PullRequest.resolvedCommentsCount,
+                PullRequest.commentsCount,
+                PullRequest.reactionsCount,
+                PullRequest.url,
+                (func.extract('epoch', PullRequest.closedAt-PullRequest.firstCommitDate) / 3600).label('totalDuration'),
+                User.name.label('author_name'))
             prs = query.all()
+            prs = [item._asdict() for item in prs]
             hasMore = False
             if limit:
                 hasMore = len(prs) > limit
@@ -86,8 +114,8 @@ class PullRequestRepository:
                 prs = list(reversed(prs))
 
             if prs:
-                before_cursor = prs[0].id if ((before is not None and hasMore) or after is not None)  else None
-                after_cursor = prs[-1].id if hasMore or before is not None else None
+                before_cursor = prs[0]['id'] if ((before is not None and hasMore) or after is not None)  else None
+                after_cursor = prs[-1]['id'] if hasMore or before is not None else None
 
             return PagedResult(prs, total_count, before_cursor, after_cursor)
         except Exception as error:

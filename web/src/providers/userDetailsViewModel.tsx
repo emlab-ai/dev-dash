@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
+import { PullRequest } from './pullRequestsViewModel';
 
 type User = {
     id: string;
@@ -19,12 +20,20 @@ interface UserDetailsModel {
     timeFilter: string;
     userPrsChart: UserPrsChart | null;
     setTimeFilter: (timeFilter: string) => void;
+    pullRequests: PullRequest | null;
+    nextPullReqestPage: () => void;
+    prevPullReqestPage: () => void;
+    hasNextPullReqestPage: boolean;
+    hasPrevPullReqestPage: boolean;
 }
 
 export const useUserDetailsModel = (id:number): UserDetailsModel => {
     const currentDate = new Date().toISOString().split('T')[0];
     const [timeFilter, setTimeFilter] = useState('1month');    
     const [user, setUser] = useState<User | null>(null);
+    const [pullRequests, setPullRequests] = useState<PullRequest>([]);
+    const [pullRequestsBefore, setPullRequestsBefore] = useState<string|null>(null);
+    const [pullRequestsAfter, setPullRequestsAfter] = useState<string|null>(null);
     const [userPrsChart, setUserPrsChart] = useState<UserPrsChart | null>(null);
 
     const startDateStr = useMemo(() => {
@@ -61,16 +70,55 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
         }
     }, []);
 
+    const fetchPullRequestsAsync = useCallback(async (user_id:number, startDateStr: string, endDateStr: string, before?: string, after?: string) => {
+        try {
+            let pageStr = '';
+            if (!!before) {
+                pageStr = `&before=${before}`;
+            } else if (!!after) {
+                pageStr = `&after=${after}`;
+            }
+            const response = await fetch(`http://localhost:8080/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&user_id=${user_id}&page_size=10${pageStr}`);
+            const result = await response.json();
+
+            setPullRequests(result.data);
+            setPullRequestsBefore(result.before);
+            setPullRequestsAfter(result.after);
+        } catch (error) {
+            console.error('Error fetching stats', error);
+        }
+    }, []);
+
 
     useEffect(() => {
         fetchUserDetailsAsync(id, startDateStr, endDateStr);
+        fetchPullRequestsAsync(id, startDateStr, endDateStr);
     }, [id, endDateStr, startDateStr])
+
+    const nextPullReqestPage = useCallback(async () => {
+        if (!pullRequestsAfter) {
+            return;
+        }
+        fetchPullRequestsAsync(id, startDateStr, endDateStr, undefined, pullRequestsAfter);
+    }, [pullRequestsAfter, id, startDateStr, endDateStr, fetchPullRequestsAsync]);
+
+    const prevPullReqestPage = useCallback(async () => {
+        if (!pullRequestsBefore) {
+            return;
+        }
+        fetchPullRequestsAsync(id, startDateStr, endDateStr, pullRequestsBefore);
+    }, [pullRequestsBefore, id, startDateStr, endDateStr,fetchPullRequestsAsync]);
 
     return {
         timeFilter,
         setTimeFilter,
         userPrsChart,
-        user
+        pullRequests,
+        user,
+        nextPullReqestPage,
+        prevPullReqestPage,
+        hasNextPullReqestPage: !!pullRequestsAfter,
+        hasPrevPullReqestPage: !!pullRequestsBefore
     };
 };
 

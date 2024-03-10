@@ -100,8 +100,6 @@ export default function PrDrawer({ isOpen, onClose, currentItem }: { isOpen: boo
                         {currentItem?.bodyText}
                     </Box>
                 </Box>
-
-
             </DrawerBody>
 
             <DrawerFooter borderTopWidth='1px'>

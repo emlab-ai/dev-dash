@@ -1,3 +1,4 @@
+import json
 from flask import Flask, jsonify, request
 from flask import g
 from flask_cors import CORS
@@ -115,12 +116,11 @@ def list_users():
         "page_size": page
     })
 
-
 @app.route('/api/git/prs', methods=['GET'])
 def get_git_prs():
     after = request.args.get('after')
     before = request.args.get('before')
-    pageSize = request.args.get('page_size')
+    pageSize = request.args.get('page_size', default=20, type=int)
 
     start_date, end_date = _get_request_date_args(request) 
     manager_id = request.args.get('manager_id')
@@ -140,12 +140,11 @@ def get_git_prs():
 
     pageSize = min(int(pageSize), 50) 
     result = prRepository.list_all(limit=pageSize, start_date=start_date, end_date=end_date, users_ids=user_ids,  managers_ids=managers_ids, after=after, before=before)
-    prs_dicts = [entity_as_dict(user) for user in result.data]
 
     git_stats = {
         "before": result.before,
         "after": result.after,
-        "data": prs_dicts,
+        "data": result.data,
         "page_size": pageSize,
         "total_count": result.total_count
     }

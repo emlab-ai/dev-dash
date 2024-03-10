@@ -34,6 +34,7 @@ export type PullRequest = {
     commentsCount:number;
     reactionsCount:number;
     url:string;
+    author_name:string;
     totalDuration:number;
 };
 
