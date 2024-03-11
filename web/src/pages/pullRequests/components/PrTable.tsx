@@ -2,6 +2,8 @@ import { Tr, Td, Table, Thead, Th, Tbody, Link, VStack, Box, HStack, Text, Headi
 import { usePullRequestsContext, PullRequest } from "@src/providers/pullRequestsViewModel";
 import { ExternalLinkIcon } from "@chakra-ui/icons";
 import { NavLink } from "react-router-dom";
+import { TableCellDuration } from "@src/components/TableCellDuration";
+import { TableCellCodeDelta } from "@src/components/TableCellCodeDelta";
 
 const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest) => void }) => {
     const { pullRequests, nextPage, prevPage, hasNextPage, hasPrevPage } = usePullRequestsContext();
@@ -38,8 +40,8 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                                         </Box>
                                     </VStack>
                                 </Td>
-                                <Td>{(pr.additions || 0) + (pr.deletions || 0)}</Td>
-                                <Td>{pr.totalDuration.toFixed(2)}</Td>                                
+                                <Td><TableCellCodeDelta additions={pr.additions} deletions={pr.deletions}/></Td>
+                                <Td><TableCellDuration hours={pr.totalDuration} /></Td>                                
                                 <Td>{pr.changedFiles}</Td>
                                 <Td>{pr.reviewThreadsCount}</Td> 
                                 <Td>{pr.resolvedCommentsCount}</Td>

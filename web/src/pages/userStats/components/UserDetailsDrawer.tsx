@@ -1,5 +1,6 @@
 import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel } from "@chakra-ui/react";
 import Pager from "@src/components/Pager";
+import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
 import PullRequestTable from "@src/components/PullRequestTable";
 import { UserDetailsProvider, useUserDetailsContext } from "@src/providers/userDetailsViewModel";
 import { Bar } from 'react-chartjs-2';
@@ -36,20 +37,22 @@ function UserDetailsDrawerContent({isOpen, onClose, userId}: UserDetailsDrawerPr
                 </HStack>
             </DrawerHeader>
             <DrawerBody>
-                <UserDetailsContent />
+                <UserDetailsContent userId={userId}/>
             </DrawerBody>
         </DrawerContent>
     </Drawer>
 }
 
-function UserDetailsContent() {
+function UserDetailsContent({userId}: {userId: number}) {
     var {
         userPrsChart, 
         pullRequests,
         nextPullReqestPage,
         prevPullReqestPage,
         hasNextPullReqestPage,
-        hasPrevPullReqestPage
+        hasPrevPullReqestPage,
+        startDate,
+        endDate
     } = useUserDetailsContext();
     const chartData = {
         labels: userPrsChart?.labels,
@@ -109,13 +112,13 @@ function UserDetailsContent() {
                     <h2>
                         <AccordionButton>
                             <Box flex="1" textAlign="left">
-                                Reviews
+                                Code Reviews
                             </Box>
                             <AccordionIcon />
                         </AccordionButton>
                     </h2>
                     <AccordionPanel pb={4}>
-                        {/* Content for Reviews tab */}
+                        <PullRequestReviewsTable userId={userId} startDate={startDate} endDate={endDate}/>
                     </AccordionPanel>
                 </AccordionItem>
             </Accordion>

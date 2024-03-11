@@ -2,13 +2,12 @@ import json
 from flask import Flask, jsonify, request
 from flask import g
 from flask_cors import CORS
-from db.repository import UserRepository
 from db.model.user import User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db.model.team import Team
 from db.model.tribe import Tribe
-from db.repository import PullRequestRepository
+from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository
 from services.statsService import StatsService
 from services.userService import UsersService, get_manager_chain
 from utils import entity_as_dict
@@ -191,6 +190,26 @@ def get_users_details(id:int):
 
 
     return jsonify(result)
+
+@app.route('/api/users/<int:id>/reviews', methods=['GET'])
+def get_users_reviews(id:int):
+    start_date, end_date = _get_request_date_args(request)
+    pageSize = request.args.get('page_size', default=20, type=int)
+    after = request.args.get('after')
+    before = request.args.get('before')
+
+    reviewsRepo = PullRequestReviewRepository(g.session)
+    result = reviewsRepo.list_all(id, start_date, end_date, limit=pageSize, after=after, before=before)
+    
+
+
+    return jsonify({
+        "before": result.before,
+        "after": result.after,
+        "data": result.data,
+        "page_size": 20,
+        "total_count": result.total_count
+        })
 
 
 if __name__ == '__main__':

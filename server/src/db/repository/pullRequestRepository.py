@@ -117,6 +117,10 @@ class PullRequestRepository:
                 before_cursor = prs[0]['id'] if ((before is not None and hasMore) or after is not None)  else None
                 after_cursor = prs[-1]['id'] if hasMore or before is not None else None
 
+
+            for pr in prs:
+                pr['totalDuration'] = float(round(pr['totalDuration'], 2))
+
             return PagedResult(prs, total_count, before_cursor, after_cursor)
         except Exception as error:
             print("Error while listing git_stats:", error)

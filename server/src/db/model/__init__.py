@@ -7,3 +7,5 @@ from .team import Team
 from .tribe import Tribe
 from .user import User
 from .pullRequest import PullRequest
+from .pullRequestReview import PullRequestReview
+from .pullRequestComment import PullRequestComment

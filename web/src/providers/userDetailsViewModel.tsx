@@ -20,21 +20,24 @@ interface UserDetailsModel {
     timeFilter: string;
     userPrsChart: UserPrsChart | null;
     setTimeFilter: (timeFilter: string) => void;
-    pullRequests: PullRequest | null;
+    pullRequests: PullRequest[] | null;
     nextPullReqestPage: () => void;
     prevPullReqestPage: () => void;
     hasNextPullReqestPage: boolean;
     hasPrevPullReqestPage: boolean;
+    startDate: string;
+    endDate: string;
 }
 
 export const useUserDetailsModel = (id:number): UserDetailsModel => {
     const currentDate = new Date().toISOString().split('T')[0];
     const [timeFilter, setTimeFilter] = useState('1month');    
     const [user, setUser] = useState<User | null>(null);
-    const [pullRequests, setPullRequests] = useState<PullRequest>([]);
+    const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
     const [pullRequestsBefore, setPullRequestsBefore] = useState<string|null>(null);
     const [pullRequestsAfter, setPullRequestsAfter] = useState<string|null>(null);
     const [userPrsChart, setUserPrsChart] = useState<UserPrsChart | null>(null);
+    
 
     const startDateStr = useMemo(() => {
         let date = new Date(currentDate);
@@ -92,22 +95,24 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
 
     useEffect(() => {
         fetchUserDetailsAsync(id, startDateStr, endDateStr);
-        fetchPullRequestsAsync(id, startDateStr, endDateStr);
+        fetchPullRequestsAsync(id, startDateStr, endDateStr);        
     }, [id, endDateStr, startDateStr])
 
-    const nextPullReqestPage = useCallback(async () => {
+    const nextPullRequestPage = useCallback(async () => {
         if (!pullRequestsAfter) {
             return;
         }
         fetchPullRequestsAsync(id, startDateStr, endDateStr, undefined, pullRequestsAfter);
     }, [pullRequestsAfter, id, startDateStr, endDateStr, fetchPullRequestsAsync]);
 
-    const prevPullReqestPage = useCallback(async () => {
+    const prevPullRequestPage = useCallback(async () => {
         if (!pullRequestsBefore) {
             return;
         }
         fetchPullRequestsAsync(id, startDateStr, endDateStr, pullRequestsBefore);
     }, [pullRequestsBefore, id, startDateStr, endDateStr,fetchPullRequestsAsync]);
+
+   
 
     return {
         timeFilter,
@@ -115,10 +120,12 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
         userPrsChart,
         pullRequests,
         user,
-        nextPullReqestPage,
-        prevPullReqestPage,
+        nextPullReqestPage: nextPullRequestPage,
+        prevPullReqestPage: prevPullRequestPage,
         hasNextPullReqestPage: !!pullRequestsAfter,
-        hasPrevPullReqestPage: !!pullRequestsBefore
+        hasPrevPullReqestPage: !!pullRequestsBefore,
+        startDate: startDateStr,
+        endDate: endDateStr   
     };
 };
 
