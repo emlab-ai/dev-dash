@@ -6,8 +6,7 @@ from db.model.user import User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db.model.team import Team
-from db.model.tribe import Tribe
-from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository
+from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository
 from services.statsService import StatsService
 from services.userService import UsersService, get_manager_chain
 from utils import entity_as_dict
@@ -31,11 +30,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
 
 engine = create_engine(connection_string, echo=True)
 
-
 Session = sessionmaker(bind=engine)
 User.metadata.create_all(engine)
 Team.metadata.create_all(engine)
-Tribe.metadata.create_all(engine)
 
 def _get_request_date_args(request) -> tuple[int, datetime, datetime]:
     start_date_str = request.args.get('start_date')
@@ -60,17 +57,17 @@ def after_request(response):
     g.session.close()
     return response
 
-@app.route('/api/users', methods=['GET'])
-def get_users():
-    isManager = request.args.get('isManager')
-    userService = UserRepository(g.session)
+# @app.route('/api/users', methods=['GET'])
+# def get_users():
+#     isManager = request.args.get('isManager')
+#     userService = UserRepository(g.session)
 
-    if isManager:
-        users = userService.list_all_managers()
-    else:
-        users = userService.list_all().data
+#     if isManager:
+#         users = userService.list_all_managers()
+#     else:
+#         users = userService.list_all().data
     
-    return jsonify([entity_as_dict(user) for user in users])
+#     return jsonify([entity_as_dict(user) for user in users])
 
 
 @app.route('/api/stats', methods=['GET'])
@@ -88,7 +85,6 @@ def get_stats():
     })
 
 
-    
 @app.route('/api/users', methods=['POST'])
 def create_user():
     userRepository = UserRepository(g.session)
@@ -98,20 +94,28 @@ def create_user():
     user = userRepository.create(user_data)
     return jsonify(entity_as_dict(user))
 
+@app.route('/api/users', methods=['PUT'])
+def update_user():
+    userRepository = UserRepository(g.session)
+
+    data = request.get_json()
+    user_data = User(**data)
+    user = userRepository.update(user_data)
+    return jsonify(entity_as_dict(user))
+
+
 @app.route('/api/users', methods=['GET'])
 def list_users():
     after = request.args.get('after')
     before = request.args.get('before')
-    page = request.args.get('page_size')
+    page = request.args.get('page_size', default=20, type=int)
 
     userRepository = UserRepository(g.session)
-    page = min(int(page), 50) 
     result = userRepository.list_all(page, after=after, before=before)
-    user_dicts = [entity_as_dict(user) for user in result.data]
     return jsonify({
         "before": result.before,
         "after": result.after,
-        "data": user_dicts,
+        "data": result.data,
         "page_size": page
     })
 
@@ -200,7 +204,6 @@ def get_users_reviews(id:int):
 
     reviewsRepo = PullRequestReviewRepository(g.session)
     result = reviewsRepo.list_all(id, start_date, end_date, limit=pageSize, after=after, before=before)
-    
 
 
     return jsonify({
@@ -210,6 +213,50 @@ def get_users_reviews(id:int):
         "page_size": 20,
         "total_count": result.total_count
         })
+
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    pageSize = request.args.get('page_size', default=20, type=int)
+    after = request.args.get('after')
+    before = request.args.get('before')
+
+    teamsRepo = TeamRepository(g.session)
+    result = teamsRepo.list_all(limit=pageSize, after=after, before=before)
+    
+    return jsonify({
+        "before": result.before,
+        "after": result.after,
+        "data": result.data,
+        "page_size": pageSize,
+        "total_count": result.total_count
+    })
+
+@app.route('/api/teams', methods=['POST'])
+def create_team():
+    data = request.get_json()
+    team = Team(**data)
+
+    teamsRepo = TeamRepository(g.session)
+    result = teamsRepo.create_team(team) 
+    
+    return jsonify(entity_as_dict(result))
+
+@app.route('/api/teams', methods=['PUT'])
+def update_team():
+    data = request.get_json()
+    team = Team(**data)
+
+    teamsRepo = TeamRepository(g.session)
+    result = teamsRepo.update_team(team) 
+    
+    return jsonify(entity_as_dict(result))
+
+@app.route('/api/teams/<id>', methods=['DELETE'])
+def delete_team(id:str):
+    teamsRepo = TeamRepository(g.session)
+    teamsRepo.delete_team(id) 
+    
+    return '', 204
 
 
 if __name__ == '__main__':

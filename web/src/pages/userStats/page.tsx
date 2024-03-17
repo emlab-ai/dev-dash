@@ -4,6 +4,7 @@ import { useUsersStatsContext } from "@src/providers/usersStatsViewModel";
 import { useCallback, useEffect, useState } from "react";
 import { UserDetailsDrawer } from "./components/UserDetailsDrawer";
 import { useParams, useNavigate } from "react-router-dom";
+import { TableCellDuration } from "@src/components/TableCellDuration";
 
 
 export default function UsersStatsPage() {
@@ -11,7 +12,8 @@ export default function UsersStatsPage() {
     const { isOpen, onOpen, onClose } = useDisclosure({
         onClose: () => navigate(`/usersstats`)
     })
-    const [currentItem, setCurrentItem] = useState<number | null>(null);
+    const [currentItem, setCurrentItem] = useState<number | undefined>();
+    const hoverColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100");
     
 
     const onClickOnLine = useCallback((id:number) => {
@@ -32,7 +34,7 @@ export default function UsersStatsPage() {
     const { managerFilter, setManagerFilter, timeFilter, setTimeFilter, usersStats } = useUsersStatsContext();
     return (
         <>
-            <Box minH="100vh" py="4">
+            <Box minH="100vh">
                 <ScopeFilter managerFilter={managerFilter} timeFilter={timeFilter} setTimeFilter={setTimeFilter} setManagerFilter={setManagerFilter }  />
 
                 <Container w="100%" maxW="full">
@@ -53,13 +55,13 @@ export default function UsersStatsPage() {
                         </Thead>
                         <Tbody>
                             { usersStats.map((stat) => 
-                                <Tr key={stat.authorId} onClick={()=>onClickOnLine(stat.authorId)} _hover={{ bg: useColorModeValue("blackAlpha.100", "whiteAlpha.100"), cursor: "pointer" }}>
+                                <Tr key={stat.authorId} onClick={()=>onClickOnLine(stat.authorId)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
                                     <Td><Avatar size="sm" name={stat.user_name}/></Td>
                                     <Td>{stat.user_name}</Td>
                                     <Td>{stat.user_team}</Td>
                                     <Td>{stat.count}</Td>
-                                    <Td>{stat.avg_duration}</Td>
-                                    <Td>{stat.max_duration}</Td>
+                                    <Td><TableCellDuration hours={stat.avg_duration}/></Td>
+                                    <Td><TableCellDuration hours={stat.max_duration}/></Td>
                                     <Td>{stat.avg_loc}</Td>
                                     <Td>{stat.max_loc}</Td>
                                     <Td>{stat.sum_loc}</Td>
@@ -72,7 +74,7 @@ export default function UsersStatsPage() {
                     </TableContainer>
                 </Container>
             </Box>
-            {currentItem && <UserDetailsDrawer isOpen={isOpen} onClose={onClose} userId={currentItem} />}
+            {<UserDetailsDrawer isOpen={isOpen} onClose={onClose} userId={currentItem} />}
         </>
     )
 }

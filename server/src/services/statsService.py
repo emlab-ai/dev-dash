@@ -32,11 +32,11 @@ class StatsService:
         result = result.data if result else []
         result_prev = result_prev.data if result_prev else []
 
-        unique_swes = len(set([pr.authorId for pr in result]))
-        unique_swes_prev = len(set([pr.authorId for pr in result_prev]))
+        unique_swes = len(set([pr["authorId"] for pr in result]))
+        unique_swes_prev = len(set([pr["authorId"] for pr in result_prev]))
 
-        diffLess100 = len([pr for pr in result if pr.deletions+pr.additions <= 100])
-        diffLess100_prev = len([pr for pr in result_prev if pr.deletions+pr.additions <= 100])
+        diffLess100 = len([pr for pr in result if pr["deletions"]+pr["additions"] <= 100])
+        diffLess100_prev = len([pr for pr in result_prev if pr["deletions"]+pr["additions"] <= 100])
 
         return [
                 {
@@ -83,29 +83,29 @@ class StatsService:
 
         result = prRepository.list_all(start_date, end_date, managerIds)
         result = result.data if result else []
-        unique_swes = len(set([pr.authorId for pr in result]))
+        unique_swes = len(set([pr["authorId"] for pr in result]))
                     
         grouped_by_date = {}
         less100_grouped_by_date = {}
         active_swe_by_date = {}
         for pr in result:
-            closed_date = pr.closedAt.date()
+            closed_date = pr["closedAt"].date()
             if closed_date not in grouped_by_date:
                 grouped_by_date[closed_date] = 0
                 less100_grouped_by_date[closed_date] = 0
                 active_swe_by_date[closed_date] = set()
             grouped_by_date[closed_date] += 1   
-            less100_grouped_by_date[closed_date] += 1 if pr.deletions+pr.additions <= 100 else 0
-            active_swe_by_date[closed_date].add(pr.authorId) 
+            less100_grouped_by_date[closed_date] += 1 if pr["deletions"]+pr["additions"] <= 100 else 0
+            active_swe_by_date[closed_date].add(pr["authorId"]) 
 
         # Calculate average total_duration_h per day
         average_duration_per_day = {}
         for pr in result:
-            closed_date = pr.closedAt.date()
+            closed_date = pr["closedAt"].date()
             if closed_date not in average_duration_per_day:
                 average_duration_per_day[closed_date] = []
             
-            average_duration_per_day[closed_date].append(pr.totalDuration)
+            average_duration_per_day[closed_date].append(pr["totalDuration"])
 
         p80_duration_per_day = {}
         for date, durations in average_duration_per_day.items():

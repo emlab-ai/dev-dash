@@ -1,5 +1,5 @@
 import datetime
-from db.repository import UserRepository, PullRequestRepository
+from db.repository import UserRepository, PullRequestRepository, PullRequestReviewRepository
 from utils import entity_as_dict
 
 def get_manager_chain(managers, managerId):
@@ -43,11 +43,17 @@ class UsersService:
         user = entity_as_dict(self.userRepository.get(user_id))
         prRepository = PullRequestRepository(self.session)
         prs_count = prRepository.get_count_by_date_user(user_id, start_date, end_date)
+        reviewRepository = PullRequestReviewRepository(self.session)
+        reviews_count = reviewRepository.get_count_by_date_user(user_id, start_date, end_date)
  
         return {
             "user": user,
             "prsCount": {
                 "labels":prs_count["labels"],
                 "data": prs_count["data"]
+            },
+            "reviewsCount": {
+                "labels":reviews_count["labels"],
+                "data": reviews_count["data"]
             }
         }

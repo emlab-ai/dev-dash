@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
-import { useUsersProviderContext } from './usersProvider';
+import { useOrgProviderContext } from './orgProvider';
+import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { useSearchStateParams } from '@src/utils/routeHooks';
 
 
 type User = {
@@ -63,9 +65,8 @@ interface PullRequestsStats {
 }
 
 export const usePullRequestsModel = (): PullRequestsModel => {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const [timeFilter, setTimeFilter] = useState('1month');    
-    const { topManager } = useUsersProviderContext();
+    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
+    const { topManager } = useOrgProviderContext();
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
     const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
@@ -79,27 +80,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         }
     }, [topManager]);
 
-    const startDateStr = useMemo(() => {
-        let date = new Date(currentDate);
-        switch (timeFilter) {
-            case '1month':
-                date.setMonth(date.getMonth() - 1);
-                break;
-            case '6months':
-                date.setMonth(date.getMonth() - 6);
-                break;
-            case '12months':
-                date.setFullYear(date.getFullYear() - 1);
-                break;
-            default:
-                break;
-        }
-        return date.toISOString().split('T')[0];
-    }, [timeFilter]);
-
-    const endDate = new Date(currentDate);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
     const fetchPullRequestsAsync = useCallback(async (pageAfter: any, pageBefore: any) => {
         try {
@@ -113,7 +94,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
             } else if (!!pageBefore) {
                 args = `&before=${pageBefore}`;
             }
-            const response = await fetch(`http://localhost:8080/api/git/prs?page_size=30${args}&start_date=${startDateStr}&end_date=${endDateStr}&manager_id=${managerFilter}`);
+            const response = await fetch(`http://localhost:8080/api/git/prs?page_size=30${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
             if (!result.data?.length) {
                 return;
@@ -126,21 +107,21 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [startDateStr, endDateStr, managerFilter]);
+    }, [startDate, endDate, managerFilter]);
 
     const fetchPullRequestsStatsAsync = useCallback(async () => {
         try {
             if(managerFilter === 0) {
                 return;
             }
-            const response = await fetch(`http://localhost:8080/api/git/prs_stats?start_date=${startDateStr}&end_date=${endDateStr}&manager_id=${managerFilter}`);
+            const response = await fetch(`http://localhost:8080/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
           
             setPullRequestStats(result);
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [startDateStr, endDateStr, managerFilter]);
+    }, [startDate, endDate, managerFilter]);
 
 
 

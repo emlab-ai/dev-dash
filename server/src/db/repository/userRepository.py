@@ -1,5 +1,6 @@
-from db.model import User
-from db.model.pagedResult import PagedResult
+from db.model import User, Team
+from db.model.pagedResult import PagedResult, process_paged_result
+from sqlalchemy.orm import aliased
 
 class UserRepository:
     def __init__(self, session):
@@ -21,38 +22,50 @@ class UserRepository:
             print("Error while getting user:", error)
 
     def list_all(self, limit=None, after=None, before=None):
-        try:
-            if before is not None and after is not None:
-                raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
+        if before is not None and after is not None:
+            raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
+        
+        query = self.session.query(User)
+        total_count = query.count()
+        Manager = aliased(User)
+        query = query.outerjoin(Manager, User.managerId == Manager.id)
+        query = query.outerjoin(Team, User.teamId == Team.id)
+
+        if after:
+            query = query.filter(User.id >= after)
+            query = query.order_by(User.id)
+        elif before:
+            query = query.filter(User.id < before)
+            query = query.order_by(User.id.desc())
+        else:
+            query = query.order_by(User.id)
+
+        if limit:
+            query = query.limit(limit+1)
             
-            query = self.session.query(User)
-            if after:
-                query = query.filter(User.id > after)
-                query = query.order_by(User.id)
-            elif before:
-                query = query.filter(User.id < before)
-                query = query.order_by(User.id.desc())
-            
+        result = query.all()
 
-            if limit:
-                query = query.limit(limit)
-                
-            users = query.all()
+        query = query.with_entities(
+            User.id,
+            User.name,
+            User.managerId,
+            User.email,
+            User.isManager,
+            User.teamId,
+            User.gitAlias,
+            User.tags,
+            User.level,
+            User.tags,
+            Manager.name.label('managerName'),
+            Team.name.label('teamName')
+        )
+        
+        result = query.all()
+        result = [item._asdict() for item in result]
+        
+        result, before_cursor, after_cursor = process_paged_result(result, limit, before, after)
 
-            before_cursor = None
-            after_cursor = None
-
-            if before:
-                users = list(reversed(users))
-
-            if users:
-                before_cursor = users[0].id
-                after_cursor = users[-1].id
-
-            return PagedResult(users, before_cursor, after_cursor)
-             
-        except Exception as error:
-            print("Error while listing users:", error)
+        return PagedResult(result, total_count, before_cursor, after_cursor)
 
     def list_all_reports(self, managerIds):
         try:
@@ -79,6 +92,7 @@ class UserRepository:
         try:
             self.session.merge(user)
             self.session.commit()
+            return user
         except Exception as error:
             print("Error while updating user:", error)
 

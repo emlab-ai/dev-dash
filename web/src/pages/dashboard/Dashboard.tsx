@@ -8,7 +8,7 @@ import ScopeFilter from "@src/components/ScopeFilter";
 export default function Dashboard() {
   var { managerFilter, setManagerFilter, timeFilter, setTimeFilter } = useDashboardContext();
   return (
-    <Box bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh" py="4">
+    <Box bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh">
 
       <ScopeFilter timeFilter={timeFilter} setTimeFilter={setTimeFilter} managerFilter={managerFilter} setManagerFilter={setManagerFilter} />
       

@@ -101,6 +101,7 @@ class PullRequestRepository:
                 User.name.label('author_name'))
             prs = query.all()
             prs = [item._asdict() for item in prs]
+            
             hasMore = False
             if limit:
                 hasMore = len(prs) > limit

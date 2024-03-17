@@ -17,7 +17,8 @@ class User(Base):
     managerId = Column(Integer, nullable=True)
     level = Column(String, nullable=True)
 
-    def __init__(self, name, teamId, level = None, email = None, gitAlias = None, managerId=None, isManager=False, tags=None):
+    def __init__(self, name, teamId, id=None, level = None, email = None, gitAlias = None, managerId=None, isManager=False, tags=None, **kwargs):
+        self.id = id
         self.name = name
         self.managerId = managerId
         self.isManager = isManager

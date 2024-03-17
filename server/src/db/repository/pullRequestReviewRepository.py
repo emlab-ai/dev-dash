@@ -56,7 +56,7 @@ class PullRequestReviewRepository:
                 PullRequestReview.state,
                 PullRequestReview.createdAt,
                 PullRequestReview.body
-            )
+            )            
                 
             reviews = query.all()
 
@@ -84,4 +84,25 @@ class PullRequestReviewRepository:
         except Exception as error:
             print("Error while listing reviews:", error)
 
- 
+    def get_count_by_date_user(self, user_id:int, start_date:datetime, end_date:datetime):
+        try:
+            query = self.session.query(PullRequestReview)
+            query = query.filter(PullRequestReview.createdAt >= start_date, PullRequestReview.createdAt <= end_date, PullRequestReview.authorId == user_id)
+            query = query.with_entities(func.date_trunc('day', PullRequestReview.createdAt).label('created_day'), 
+                                        func.count(PullRequestReview.id).label('count')) 
+            query = query.group_by(func.date_trunc('day', PullRequestReview.createdAt))
+
+            prs = query.all()
+            
+            delta = end_date - start_date
+            labels = [(start_date + datetime.timedelta(days=i)).date().isoformat() for i in range(delta.days + 1)]
+            values = {item.created_day.date().isoformat(): item.count for item in prs}
+
+            data = [values.get(label, 0) for label in labels]
+
+            return {
+                "labels": labels,
+                "data": data
+            }
+        except Exception as error:
+            print("Error while listing get_count_by_date_user:", error)

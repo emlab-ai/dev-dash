@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
 import { PullRequest } from './pullRequestsViewModel';
+import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { useSearchStateParams } from '@src/utils/routeHooks';
 
 type User = {
     id: string;
@@ -10,7 +12,7 @@ type User = {
     isManager: boolean;
 };
 
-type UserPrsChart = {
+type ChartData = {
     labels: Date[];
     data: number[];
 }
@@ -18,7 +20,8 @@ type UserPrsChart = {
 interface UserDetailsModel {
     user: User | null;
     timeFilter: string;
-    userPrsChart: UserPrsChart | null;
+    userPrsChart: ChartData | null;
+    userReviewsChart: ChartData | null;
     setTimeFilter: (timeFilter: string) => void;
     pullRequests: PullRequest[] | null;
     nextPullReqestPage: () => void;
@@ -29,37 +32,16 @@ interface UserDetailsModel {
     endDate: string;
 }
 
-export const useUserDetailsModel = (id:number): UserDetailsModel => {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const [timeFilter, setTimeFilter] = useState('1month');    
+export const useUserDetailsModel = (id?:number): UserDetailsModel => {    
+    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
     const [user, setUser] = useState<User | null>(null);
     const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
     const [pullRequestsBefore, setPullRequestsBefore] = useState<string|null>(null);
     const [pullRequestsAfter, setPullRequestsAfter] = useState<string|null>(null);
-    const [userPrsChart, setUserPrsChart] = useState<UserPrsChart | null>(null);
-    
+    const [userPrsChart, setUserPrsChart] = useState<ChartData | null>(null);
+    const [userReviewsChart, setUserReviewsChart] = useState<ChartData | null>(null);
 
-    const startDateStr = useMemo(() => {
-        let date = new Date(currentDate);
-        switch (timeFilter) {
-            case '1month':
-                date.setMonth(date.getMonth() - 1);
-                break;
-            case '6months':
-                date.setMonth(date.getMonth() - 6);
-                break;
-            case '12months':
-                date.setFullYear(date.getFullYear() - 1);
-                break;
-            default:
-                break;
-        }
-        return date.toISOString().split('T')[0];
-    }, [timeFilter]);
-
-    const endDate = new Date(currentDate);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
     const fetchUserDetailsAsync = useCallback(async (id:number, startDateStr: string, endDateStr: string) => {
         try {
@@ -68,6 +50,7 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
 
             setUser(result.user);
             setUserPrsChart(result.prsCount);
+            setUserReviewsChart(result.reviewsCount);
         } catch (error) {
             console.error('Error fetching stats', error);
         }
@@ -94,25 +77,27 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
 
 
     useEffect(() => {
-        fetchUserDetailsAsync(id, startDateStr, endDateStr);
-        fetchPullRequestsAsync(id, startDateStr, endDateStr);        
-    }, [id, endDateStr, startDateStr])
+        if(!id) {
+            return;
+        }
+
+        fetchUserDetailsAsync(id, startDate, endDate);
+        fetchPullRequestsAsync(id, startDate, endDate);        
+    }, [id, endDate, startDate])
 
     const nextPullRequestPage = useCallback(async () => {
-        if (!pullRequestsAfter) {
+        if (!pullRequestsAfter || !id) {
             return;
         }
-        fetchPullRequestsAsync(id, startDateStr, endDateStr, undefined, pullRequestsAfter);
-    }, [pullRequestsAfter, id, startDateStr, endDateStr, fetchPullRequestsAsync]);
+        fetchPullRequestsAsync(id, startDate, endDate, undefined, pullRequestsAfter);
+    }, [pullRequestsAfter, id, startDate, endDate, fetchPullRequestsAsync]);
 
     const prevPullRequestPage = useCallback(async () => {
-        if (!pullRequestsBefore) {
+        if (!pullRequestsBefore || !id) {
             return;
         }
-        fetchPullRequestsAsync(id, startDateStr, endDateStr, pullRequestsBefore);
-    }, [pullRequestsBefore, id, startDateStr, endDateStr,fetchPullRequestsAsync]);
-
-   
+        fetchPullRequestsAsync(id, startDate, endDate, pullRequestsBefore);
+    }, [pullRequestsBefore, id, startDate, endDate,fetchPullRequestsAsync]);
 
     return {
         timeFilter,
@@ -124,8 +109,9 @@ export const useUserDetailsModel = (id:number): UserDetailsModel => {
         prevPullReqestPage: prevPullRequestPage,
         hasNextPullReqestPage: !!pullRequestsAfter,
         hasPrevPullReqestPage: !!pullRequestsBefore,
-        startDate: startDateStr,
-        endDate: endDateStr   
+        startDate: startDate,
+        endDate: endDate,
+        userReviewsChart
     };
 };
 
@@ -143,7 +129,7 @@ export const useUserDetailsContext = (): UserDetailsModel => {
 };
 
 // Create the provider component
-export const UserDetailsProvider: React.FC<{ id:number, children: React.ReactNode }> = ({id, children }) => {
+export const UserDetailsProvider: React.FC<{ id?:number, children: React.ReactNode }> = ({id, children }) => {
     const model = useUserDetailsModel(id);
 
     return <UserDetailsContext.Provider value={model}>

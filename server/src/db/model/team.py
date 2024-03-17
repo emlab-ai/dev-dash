@@ -1,15 +1,18 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Uuid
 from . import Base
 
 class Team(Base):
     __tablename__ = 'teams'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Uuid, primary_key=True)
     name = Column(String)
     tags = Column(String, nullable=True)
-    tribeId = Column(Integer)
+    parentId = Column(Uuid, nullable=True)
+    gitHubTeamId = Column(String, nullable=True)
 
-    def __init__(self, name, tribeId, tags=None):
+    def __init__(self, name, id=None, parentId=None, tags=None, gitHubTeamId=None, **kwargs):
+        self.id = id
         self.name = name
         self.tags = tags
-        self.tribeId = tribeId
+        self.parentId = parentId
+        self.gitHubTeamId = gitHubTeamId

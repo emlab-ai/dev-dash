@@ -51,11 +51,12 @@ export default function Layout() {
   return (
     <>
         <Head>
-            <title>Toggle Sidebar and Navbar Layout | {BrandName}</title>
+            <title>emlab.ai</title>
         </Head>
-        {/* <PreviewOptionsNavbar /> */}
         <Flex as="nav" alignItems="center" justifyContent="space-between" h='16' py='2.5' pr="2.5">
             <HStack spacing={2}>
+
+                <img src="/public/logo.svg" alt="Logo" width="36px" style={{marginLeft: 12}}/>
                 <IconButton {...buttonProps} _active='none' _focus='none' _hover='none' fontSize="18px" variant='ghost' icon={<BiMenu />} aria-label='open menu'/>
                 <Heading as='h1' size="md">{BrandName}</Heading>
             </HStack>
@@ -73,7 +74,7 @@ export default function Layout() {
                     }
                 </List>
             </Box>
-            <Flex as="main" w='full' minH="90vh" align="center" justify="center" bg={useColorModeValue('gray.50', 'gray.900')}>
+            <Flex as="main" w='full' minH="90vh" bg={useColorModeValue('gray.50', 'gray.900')}>
               <Box width="100%">
                   <Outlet/>
               </Box>

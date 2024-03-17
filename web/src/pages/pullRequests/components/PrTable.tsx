@@ -1,12 +1,14 @@
-import { Tr, Td, Table, Thead, Th, Tbody, Link, VStack, Box, HStack, Text, Heading, Divider, TableContainer, useColorModeValue } from "@chakra-ui/react";
+import { Tr, Td, Table, Thead, Th, Tbody, Link, VStack, Box, HStack, Text, Heading, Divider, TableContainer, useColorModeValue, Avatar } from "@chakra-ui/react";
 import { usePullRequestsContext, PullRequest } from "@src/providers/pullRequestsViewModel";
 import { ExternalLinkIcon } from "@chakra-ui/icons";
 import { NavLink } from "react-router-dom";
 import { TableCellDuration } from "@src/components/TableCellDuration";
 import { TableCellCodeDelta } from "@src/components/TableCellCodeDelta";
+import Pager from "@src/components/Pager";
 
 const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest) => void }) => {
     const { pullRequests, nextPage, prevPage, hasNextPage, hasPrevPage } = usePullRequestsContext();
+    const hoverColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100");
 
     return (
         <Box width="100%" pl={8} pr={8}>
@@ -14,18 +16,22 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                 <Table variant="simple" width="100%" >
                     <Thead>
                         <Tr>
+                            <Th></Th>
                             <Th w="600px">Title</Th>
                             <Th>LoC</Th>
                             <Th>Total time (hours)</Th>                            
-                            <Th>Files changed</Th>
-                            <Th>Review threads</Th>
-                            <Th>Resolved comments</Th>
-                            <Th>Comments</Th>
+                            <Th isNumeric>Files changed</Th>
+                            <Th isNumeric>Review threads</Th>
+                            <Th isNumeric>Resolved comments</Th>
+                            <Th isNumeric>Comments</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {pullRequests.map((pr) => (
-                            <Tr key={pr.id} onClick={() => onClickOnLine(pr)} _hover={{ bg: useColorModeValue("blackAlpha.100", "whiteAlpha.100"), cursor: "pointer" }}>
+                        {pullRequests.map((pr) => (                        
+                            <Tr key={pr.id} onClick={() => onClickOnLine(pr)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
+                                <Td>                                    
+                                    <Avatar size="sm" name={pr.author_name}/>
+                                </Td>
                                 <Td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     <VStack width="100%" align="left">
                                         <Heading as="h2" size="sm">{pr.title}</Heading>
@@ -36,26 +42,23 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                                                     #{pr.number}
                                                 </Link>&nbsp;
                                                 closed {new Date(pr.closedAt).toLocaleDateString()}
-                                                &nbsp; created by <NavLink to={`/usersstats/${pr.authorId}`}><Link>@{pr.author}</Link></NavLink> </Text>
+                                                &nbsp; created by <NavLink to={`/usersstats/${pr.authorId}`}>@{pr.author}</NavLink> </Text>
                                         </Box>
                                     </VStack>
                                 </Td>
                                 <Td><TableCellCodeDelta additions={pr.additions} deletions={pr.deletions}/></Td>
                                 <Td><TableCellDuration hours={pr.totalDuration} /></Td>                                
-                                <Td>{pr.changedFiles}</Td>
-                                <Td>{pr.reviewThreadsCount}</Td> 
-                                <Td>{pr.resolvedCommentsCount}</Td>
-                                <Td>{pr.commentsCount}</Td>
+                                <Td isNumeric>{pr.changedFiles}</Td>
+                                <Td isNumeric>{pr.reviewThreadsCount}</Td> 
+                                <Td isNumeric>{pr.resolvedCommentsCount}</Td>
+                                <Td isNumeric>{pr.commentsCount}</Td>
                             </Tr>
                         ))}
                     </Tbody>
                 </Table>
             </TableContainer>
             <Divider />
-            <HStack justifyContent="center" pt={4} pb={8}>
-                <Link pointerEvents={hasPrevPage?"all":"none"} onClick={prevPage}>&lt;&nbsp;Previous</Link>
-                <Link pointerEvents={hasNextPage?"all":"none"} onClick={nextPage} pl={2}>Next&nbsp;&gt;</Link>
-            </HStack>
+            <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNextPage} hasPrev={hasPrevPage}/>
         </Box>
 
 

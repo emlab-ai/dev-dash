@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, createContext, useContext, useMemo } from 'react';
-import { UserData, useUsersProviderContext } from './usersProvider';
+import { User, useOrgProviderContext } from './orgProvider';
+import { useTimeFilterDates } from '@src/utils/timeFunctions';
 
 type StatCue = {
     label: string;
@@ -35,9 +36,9 @@ const initialStats: Stats = {
 };
 
 interface DashboardModel {
-    users: UserData[];
-    managers: UserData[];
-    topManager: UserData  | undefined;
+    users: User[];
+    managers: User[];
+    topManager: User  | undefined;
     stats: Stats;
     timeFilter: string;
     managerFilter: number;
@@ -47,9 +48,7 @@ interface DashboardModel {
 }
 
 export const useDashboardModel = (): DashboardModel => {
-    const currentDate = new Date().toISOString().split('T')[0];
-
-    const { users, managers, topManager } = useUsersProviderContext();
+    const { users, managers, topManager } = useOrgProviderContext();
     const [timeFilter, setTimeFilter] = useState('1month');
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
     const [stats, setStats] = useState(initialStats);
@@ -60,34 +59,14 @@ export const useDashboardModel = (): DashboardModel => {
         }
     }, [topManager]);
 
-    const startDateStr = useMemo(() => {
-        let date = new Date(currentDate);
-        switch (timeFilter) {
-            case '1month':
-                date.setMonth(date.getMonth() - 1);
-                break;
-            case '6months':
-                date.setMonth(date.getMonth() - 6);
-                break;
-            case '12months':
-                date.setFullYear(date.getFullYear() - 1);
-                break;
-            default:
-                break;
-        }
-        return date.toISOString().split('T')[0];
-    }, [timeFilter]);
-
-    const endDate = new Date(currentDate);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
     const fetchStatsAsync = useCallback(async () => {
         try {
             if (managerFilter === 0) {
                 return;
             }
-            const response = await fetch(`http://localhost:8080/api/stats?start_date=${startDateStr}&end_date=${endDateStr}&manager_id=${managerFilter}`);
+            const response = await fetch(`http://localhost:8080/api/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const data = await response.json();
             setStats({
                 loaded: true,
@@ -97,7 +76,7 @@ export const useDashboardModel = (): DashboardModel => {
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [managerFilter, startDateStr, endDateStr]);
+    }, [managerFilter, startDate, endDate]);
 
 
     useEffect(() => {

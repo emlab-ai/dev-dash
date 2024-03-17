@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
-import { useUsersProviderContext } from './usersProvider';
+import { useOrgProviderContext } from './orgProvider';
+import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { useSearchStateParams } from '@src/utils/routeHooks';
 
 type User = {
     id: string;
@@ -33,40 +35,19 @@ interface UsersStatsModel {
     fetchUserStatsAsync: () => Promise<void>;
 }
 
-export const useUsersStatsModel = (): UsersStatsModel => {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const [timeFilter, setTimeFilter] = useState('1month');    
-    const { topManager } = useUsersProviderContext();
+export const useUsersStatsModel = (): UsersStatsModel => {    
+    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
+    const { topManager } = useOrgProviderContext();
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
     const [usersStats, setUsersStats] = useState<UserStat[]>([]);
 
     useEffect(() => {
-        if (topManager) {
+        if (topManager && topManager.id) {
             setManagerFilter(topManager.id);
         }
     }, [topManager]);
 
-    const startDateStr = useMemo(() => {
-        let date = new Date(currentDate);
-        switch (timeFilter) {
-            case '1month':
-                date.setMonth(date.getMonth() - 1);
-                break;
-            case '6months':
-                date.setMonth(date.getMonth() - 6);
-                break;
-            case '12months':
-                date.setFullYear(date.getFullYear() - 1);
-                break;
-            default:
-                break;
-        }
-        return date.toISOString().split('T')[0];
-    }, [timeFilter]);
-
-    const endDate = new Date(currentDate);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
     const fetchUserStatsAsync = useCallback(async () => {
         try {
@@ -74,14 +55,14 @@ export const useUsersStatsModel = (): UsersStatsModel => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:8080/api/users/stats?start_date=${startDateStr}&end_date=${endDateStr}&manager_id=${managerFilter}`);
+            const response = await fetch(`http://localhost:8080/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
 
             setUsersStats(result);
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [startDateStr, endDateStr, managerFilter]);
+    }, [startDate, endDate, managerFilter]);
 
 
     useEffect(() => {

@@ -1,4 +1,5 @@
-import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel } from "@chakra-ui/react";
+import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, TabPanels, Tabs, Tab, TabList, TabPanel } from "@chakra-ui/react";
+import DateFilterToggle from "@src/components/DateFilterToggle";
 import Pager from "@src/components/Pager";
 import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
 import PullRequestTable from "@src/components/PullRequestTable";
@@ -7,11 +8,11 @@ import { Bar } from 'react-chartjs-2';
 
 interface UserDetailsDrawerProps {
     isOpen: boolean;
-    userId: number;
+    userId?: number;
     onClose: () => void;
 }
 
-export function UserDetailsDrawer({isOpen, onClose, userId}: UserDetailsDrawerProps){
+export function UserDetailsDrawer({ isOpen, onClose, userId }: UserDetailsDrawerProps) {
     return (
         <UserDetailsProvider id={userId}>
             <UserDetailsDrawerContent isOpen={isOpen} onClose={onClose} userId={userId} />
@@ -19,8 +20,8 @@ export function UserDetailsDrawer({isOpen, onClose, userId}: UserDetailsDrawerPr
     );
 }
 
-function UserDetailsDrawerContent({isOpen, onClose, userId}: UserDetailsDrawerProps) {
-    var {user} = useUserDetailsContext();
+function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawerProps) {
+    var { user } = useUserDetailsContext();
 
     return <Drawer
         isOpen={isOpen}
@@ -33,37 +34,35 @@ function UserDetailsDrawerContent({isOpen, onClose, userId}: UserDetailsDrawerPr
             <DrawerCloseButton />
             <DrawerHeader>
                 <HStack alignItems="center">
-                    <Avatar size="md" name={user?.name}/> <Text>{user?.name}</Text>
+                    <Avatar size="md" name={user?.name} /> <Text>{user?.name}</Text>
                 </HStack>
             </DrawerHeader>
             <DrawerBody>
-                <UserDetailsContent userId={userId}/>
+                <UserDetailsContent userId={userId} />
             </DrawerBody>
         </DrawerContent>
     </Drawer>
 }
 
-function UserDetailsContent({userId}: {userId: number}) {
-    var {
-        userPrsChart, 
-        pullRequests,
-        nextPullReqestPage,
-        prevPullReqestPage,
-        hasNextPullReqestPage,
-        hasPrevPullReqestPage,
-        startDate,
-        endDate
-    } = useUserDetailsContext();
+function UserDetailsContent({ userId }: { userId?: number }) {
+    var context = useUserDetailsContext();
     const chartData = {
-        labels: userPrsChart?.labels,
+        labels: context.userPrsChart?.labels,
         datasets: [
             {
-                label: 'PRs',
-                data: userPrsChart?.data,
+                label: 'Pull Requests',
+                data: context.userPrsChart?.data,
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1,
             },
+            {
+                label: 'Reviews',
+                data: context.userReviewsChart?.data,
+                backgroundColor: '#ffc00033',
+                borderColor: '#ffc000',
+                borderWidth: 1,
+            }
         ],
     };
 
@@ -79,49 +78,39 @@ function UserDetailsContent({userId}: {userId: number}) {
                     }
                 },
                 ticks: {
-                  maxRotation: 0,
-                  autoSkip: true,
-              },
+                    maxRotation: 0,
+                    autoSkip: true,
+                },
+                stacked: true
             },
             y: {
                 beginAtZero: true,
+                stacked: true
             },
         },
     };
 
     return (
         <Box>
+            <HStack>
+                <DateFilterToggle value={context.timeFilter} onChange={context.setTimeFilter} size="xs" />
+            </HStack>
             <Bar data={chartData} options={chartOptions} height="100px" />
-            <Accordion allowToggle defaultIndex={0}>
-                <AccordionItem>
-                    <h2>
-                        <AccordionButton>
-                            <Box flex="1" textAlign="left">
-                                Pull Requests
-                            </Box>
-                            <AccordionIcon />
-                        </AccordionButton>
-                    </h2>
-                    <AccordionPanel pb={4}>
-                        {/* Content for PRs tab */}
-                        <PullRequestTable data={pullRequests}></PullRequestTable>
-                        <Pager nextPage={nextPullReqestPage} prevPage={prevPullReqestPage} hasNext={hasNextPullReqestPage} hasPrev={hasPrevPullReqestPage} />
-                    </AccordionPanel>
-                </AccordionItem>
-                <AccordionItem>
-                    <h2>
-                        <AccordionButton>
-                            <Box flex="1" textAlign="left">
-                                Code Reviews
-                            </Box>
-                            <AccordionIcon />
-                        </AccordionButton>
-                    </h2>
-                    <AccordionPanel pb={4}>
-                        <PullRequestReviewsTable userId={userId} startDate={startDate} endDate={endDate}/>
-                    </AccordionPanel>
-                </AccordionItem>
-            </Accordion>
+            <Tabs>
+                <TabList>
+                    <Tab>Pull Requests</Tab>
+                    <Tab>Code Reviews</Tab>
+                </TabList>
+                <TabPanels>
+                    <TabPanel>
+                        <PullRequestTable data={context.pullRequests}></PullRequestTable>
+                        <Pager nextPage={context.nextPullReqestPage} prevPage={context.prevPullReqestPage} hasNext={context.hasNextPullReqestPage} hasPrev={context.hasPrevPullReqestPage} />
+                    </TabPanel>
+                    <TabPanel>
+                        <PullRequestReviewsTable userId={userId} startDate={context.startDate} endDate={context.endDate} />
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
         </Box>
     );
 }   
