@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Set working directory
-        run: cd ./server
+        run: cd ./server/src
 
       - name: Create and start virtual environment
         run: |
