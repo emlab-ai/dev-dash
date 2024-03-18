@@ -51,6 +51,6 @@ class PullRequest(Base):
         self.reactionsCount = reactionsCount
         self.url = url
 
-    @property
-    def totalDuration(self):
-        return (self.closedAt - self.firstCommitDate).total_seconds() / 3600
+    # @property
+    # def totalDuration(self):
+    #     return (self.closedAt - self.firstCommitDate).total_seconds() / 3600

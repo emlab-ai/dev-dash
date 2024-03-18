@@ -8,11 +8,15 @@ import { TriangleDownIcon, TriangleUpIcon } from "@chakra-ui/icons";
 export type VirtualizedDataTableProps<Data extends object> = {
   columns: ColumnDef<Data, any>[];
   query: UseInfiniteQueryResult<Data, unknown>;
+  onSortingChange?: (sorting: SortingState) => void;
+  onRowClick?: (item: Data) => void;
 };
 
 export function VirtualizedDataTable<Data extends object>({
   columns,
-  query
+  query,
+  onSortingChange,
+  onRowClick
 }: VirtualizedDataTableProps<Data>) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -29,7 +33,10 @@ export function VirtualizedDataTable<Data extends object>({
     state: {
       sorting,
     },
-    onSortingChange: setSorting,
+    onSortingChange: (s)=>{
+      setSorting(s);
+      onSortingChange && onSortingChange(s);
+    }
   });
 
   const { rows } = table.getRowModel();
@@ -78,26 +85,26 @@ export function VirtualizedDataTable<Data extends object>({
             {table.getHeaderGroups().map(headerGroup => (
               <Tr key={headerGroup.id} style={{
                 display: 'flex',
-                width: '100%',
-              
-              }} p={0}>
+                width: '100%',               
+              }}
+              pb={2}
+              >
                 {headerGroup.headers.map(header => (
                   <Th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
+                    pr={1}
+                    pl={1}
                     style={{ 
                         display: 'flex', 
                         width: header.getSize(),
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 1,
                        }}
                     p={0}
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {{
-                      asc: <Icon as={TriangleUpIcon} boxSize="xs" />,// ' 🔼',
-                      desc: <Icon as={TriangleDownIcon} boxSize="xs" />//' 🔽',
+                      asc: <Icon as={TriangleUpIcon} w={10} />,// ' 🔼',
+                      desc: <Icon as={TriangleDownIcon} w={10} />//' 🔽',
                     }[header.column.getIsSorted() as string] ?? null}
                   </Th>
                 ))}
@@ -125,11 +132,14 @@ export function VirtualizedDataTable<Data extends object>({
                     width: '100%',
                     height: '66px',
                   }}
+                  onClick={()=>{onRowClick && onRowClick(row.original)}}
                 >
                   {row.getVisibleCells().map(cell => (
                     <Td
                       key={cell.id}
                       p={0}
+                      pr={1}
+                      pl={1}
                       style={{
                         display: 'flex',
                         width: cell.column.getSize(),

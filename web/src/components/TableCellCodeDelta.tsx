@@ -4,7 +4,7 @@ export const TableCellCodeDelta = ({deletions, additions}: {deletions: number, a
     const changes = additions + deletions;
     const bred = changes > 100;
     return (
-        <Box pl={1} pr={1} bg={bred?useColorModeValue('red.100', 'red.100'):undefined} color={bred?useColorModeValue('black', 'black'):undefined}>
+        <Box w="100%" pl={2} pr={2} bg={bred?useColorModeValue('red.100', 'red.100'):undefined} color={bred?useColorModeValue('black', 'black'):undefined}>
             <VStack p={1} spacing={0} alignItems="flex-start">
                 <Text fontSize="xs"><Text as="span" fontWeight="bold">{changes}</Text>&nbsp;edits</Text>
                 <HStack spacing={1}>

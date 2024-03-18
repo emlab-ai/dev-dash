@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
@@ -41,19 +41,14 @@ interface PagedResult<Data extends object> {
 }
 
 interface PullRequestsModel {
-    pullRequests: PullRequest[];
-    totalCount: number;
     timeFilter: string;
-    managerFilter: number;
+    managerFilter: string;
     pullRequestsStats: PullRequestsStats | null;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: number) => void;
-    fetchPullRequestsAsync: (pageAfter: any, pageBefore: any, limit: any, sorting: any) => Promise<PagedResult<PullRequest>>;
-    nextPage: () => Promise<void>;
-    prevPage: () => Promise<void>;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
+    setManagerFilter: (managerFilter: string) => void;
     pullRequestQuery: ReturnType<typeof useInfiniteQuery<PullRequest>>;
+    sorting: SortingState;
+    setSorting: (sorting: SortingState) => void;
 }
 
 interface PullRequestsStats {
@@ -66,12 +61,9 @@ interface PullRequestsStats {
 export const usePullRequestsModel = (): PullRequestsModel => {
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
-    const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
-    const [pageBefore, setPageBefore] = useState(null);
-    const [pageAfter, setPageAfter] = useState(null);
-    const [totalCount, setTotalCount] = useState(0);
+    const [sorting, setSorting] = useState<SortingState>([]);
 
     useEffect(() => {
         if (topManager) {
@@ -83,7 +75,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
 
     const fetchPullRequestsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<PullRequest>> => {
         try {
-            if(managerFilter === 0) {
+            if(!managerFilter) {
                 return {
                     data: [],
                     before: null,
@@ -98,7 +90,13 @@ export const usePullRequestsModel = (): PullRequestsModel => {
             } else if (!!pageBefore) {
                 args = `&before=${pageBefore}`;
             }
-            const response = await fetch(`http://localhost:8080/api/git/prs?page_size=30${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+
+            let sortingArgs = '';
+            if (!!sorting?.length) {
+                sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
+            }
+
+            const response = await fetch(`http://localhost:8080/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
             const result = await response.json();
             if (!result.data?.length) {
                 return {
@@ -108,11 +106,6 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                     total_count: 0
                 };
             }
-
-            // setPullRequests(result.data);
-            // setPageBefore(result.before);
-            // setPageAfter(result.after);
-            // setTotalCount(result.total_count);
 
             return result;
         } catch (error) {
@@ -129,9 +122,10 @@ export const usePullRequestsModel = (): PullRequestsModel => {
 
     const fetchPullRequestsStatsAsync = useCallback(async () => {
         try {
-            if(managerFilter === 0) {
+            if(!managerFilter) {
                 return;
             }
+
             const response = await fetch(`http://localhost:8080/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
           
@@ -141,22 +135,10 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         }
     }, [startDate, endDate, managerFilter]);
 
-
-
     useEffect(() => {
-        fetchPullRequestsAsync(null, null);
         fetchPullRequestsStatsAsync();
     }, [managerFilter, timeFilter])
 
-    const nextPage = useCallback(async () => {
-        await fetchPullRequestsAsync(pageAfter, null);
-    }, [pageAfter]);
-
-    const prevPage = useCallback(async () => {
-        await fetchPullRequestsAsync(null, pageBefore);
-    }, [pageBefore]);
-
-    const {sorting, setSorting} = useState<SortingState>([]);
     
     const pullRequestQuery = useInfiniteQuery<PullRequest>({
         queryKey: ['people', sorting, managerFilter, timeFilter],
@@ -174,15 +156,10 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         setTimeFilter,
         managerFilter,
         setManagerFilter,
-        pullRequests,
-        fetchPullRequestsAsync,
-        totalCount,
-        nextPage,
-        prevPage,
         pullRequestQuery,
         pullRequestsStats,
-        hasNextPage: !!pageAfter,
-        hasPrevPage: !!pageBefore
+        sorting,
+        setSorting
     };
 };
 

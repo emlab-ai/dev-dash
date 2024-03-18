@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { VirtualizedDataTable } from "@src/components/VirtualizedDataTable";
 
 const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest) => void }) => {
-    const { pullRequestQuery, fetchPullRequestsAsync, nextPage, prevPage, hasNextPage, hasPrevPage } = usePullRequestsContext();
+    const { pullRequestQuery, setSorting } = usePullRequestsContext();
     const columns = useMemo(
         () => [
             {
@@ -43,20 +43,17 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
             },
             {
                 header: 'LoC',
-                id: 'additions',
-                minSize: 100,
-                meta: { size: "auto" },
-                size: null,
-                accessorKey: 'additions',
+                id: 'changes',
+                size: 120,
+                accessorKey: 'changes',
                 cell: ({ cell: { row } }: any) => (
                     <TableCellCodeDelta additions={row.original.additions} deletions={row.original.deletions} />
                 ),
             },
             {
-                header: 'Total time (hours)',
+                header: 'Cycle time',
                 id: 'totalDuration',
-                minSize: 100,
-                meta: { size: "auto" },
+                size: 120,
                 accessorKey: 'totalDuration',
                 cell: ({ row }: any) => (
                     <TableCellDuration hours={row.original.totalDuration} />
@@ -65,24 +62,20 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
             {
                 header: 'Files changed',
                 id: 'changedFiles',
-                meta: { size: "auto" },
                 accessorKey: 'changedFiles'
             },
             {
                 header: 'Review threads',
-                meta: { size: "auto" },
                 id: 'reviewThreadsCount',
                 accessorKey: 'reviewThreadsCount'
             },
             {
                 header: 'Resolved comments',
-                meta: { size: "auto" },
                 id: 'resolvedCommentsCount',
                 accessorKey: 'resolvedCommentsCount'
             },
             {
                 header: 'Comments',
-                meta: { size: "auto" },
                 id: 'commentsCount',
                 accessorKey: 'commentsCount'
             }
@@ -92,7 +85,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
 
     return (
         <Box width="100%">
-            <VirtualizedDataTable columns={columns} query={pullRequestQuery} />            
+            <VirtualizedDataTable columns={columns} query={pullRequestQuery} onSortingChange={setSorting} onRowClick={onClickOnLine}/>            
         </Box>
     );
 };

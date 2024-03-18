@@ -39,13 +39,13 @@ export default function UserEditDrawer({ isOpen, onClose, onDelete, mode, value 
 
     const wathchIsManager = watch("isManager");
 
-    return (
+    return (        
         <Drawer isOpen={isOpen} onClose={() => onClose()} size="md">
             <DrawerOverlay />
+            <form onSubmit={handleSubmit(onClose)}>
             <DrawerContent overflowY="auto">
-                <form onSubmit={handleSubmit(onClose)}>
-                    <DrawerHeader>{mode === "Create" ? 'Add new user' : 'Edit the user'}</DrawerHeader>
                     <DrawerCloseButton />
+                    <DrawerHeader>{mode === "Create" ? 'Add new user' : 'Edit the user'}</DrawerHeader>                
                     <DrawerBody overflowY="auto">
                         <FormControl>
                             <FormLabel>Name</FormLabel>
@@ -123,8 +123,9 @@ export default function UserEditDrawer({ isOpen, onClose, onDelete, mode, value 
                             </HStack>
                         </Flex>
                     </DrawerFooter>
-                </form>
             </DrawerContent>
+            </form>
         </Drawer>
+        
     );
 }

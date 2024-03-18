@@ -128,6 +128,8 @@ def get_git_prs():
     start_date, end_date = _get_request_date_args(request) 
     manager_id = request.args.get('manager_id')
     user_id = request.args.get('user_id')
+    sort_by = request.args.get('s')
+    sort_order = request.args.get('so', default='asc')
     
     prRepository = PullRequestRepository(g.session)
     userService = UsersService(g.session)
@@ -142,7 +144,16 @@ def get_git_prs():
         user_ids = [user_id]
 
     pageSize = min(int(pageSize), 50) 
-    result = prRepository.list_all(limit=pageSize, start_date=start_date, end_date=end_date, users_ids=user_ids,  managers_ids=managers_ids, after=after, before=before)
+    result = prRepository.list_all(
+        limit=pageSize, 
+        start_date=start_date,
+        end_date=end_date, 
+        users_ids=user_ids,  
+        managers_ids=managers_ids, 
+        after=after, 
+        before=before,
+        sort_by=sort_by,
+        sort_order=sort_order)
 
     git_stats = {
         "before": result.before,

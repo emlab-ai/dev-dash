@@ -1,4 +1,4 @@
-import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, TabPanels, Tabs, Tab, TabList, TabPanel } from "@chakra-ui/react";
+import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, TabPanels, Tabs, Tab, TabList, TabPanel, DrawerFooter } from "@chakra-ui/react";
 import DateFilterToggle from "@src/components/DateFilterToggle";
 import Pager from "@src/components/Pager";
 import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
@@ -37,9 +37,9 @@ function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawer
                     <Avatar size="md" name={user?.name} /> <Text>{user?.name}</Text>
                 </HStack>
             </DrawerHeader>
-            <DrawerBody>
+            <DrawerBody overflowY="scroll">
                 <UserDetailsContent userId={userId} />
-            </DrawerBody>
+            </DrawerBody>            
         </DrawerContent>
     </Drawer>
 }

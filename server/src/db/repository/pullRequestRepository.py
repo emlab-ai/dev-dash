@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import func, and_, or_, cast, Float
 from db.model import PullRequest
 from db.model.pagedResult import PagedResult
 from db.model.user import User
 from sqlalchemy import func
+import base64
+import json
 
 class PullRequestStats:
     def __init__(self, avg_loc, avg_duration, avg_files_changed, avg_comments_count):
@@ -23,6 +25,47 @@ class PullRequestsUsersStats:
         self.count_repos = count_repos
         self.avg_duration = avg_duration
         self.max_duration = max_duration
+
+def encode_cursor(id, sort_by: str, sort_by_value) -> str:
+    cursor = {
+        "id": id        
+    }
+    if sort_by:
+        cursor[sort_by] = sort_by_value
+    return base64.b64encode(json.dumps(cursor).encode('utf-8')).decode('utf-8')
+
+def decode_cursor(cursor: str) -> dict:
+    decoded_string = base64.b64decode(cursor).decode('utf-8')
+    return json.loads(decoded_string)
+
+def add_cursor_filter(query, after:str, before:str, sort_by:list[str], orderAttr, sort_order):
+    if after:
+        after_cursor = decode_cursor(after)
+        afterId = after_cursor['id']
+        afterSortBy = after_cursor[sort_by] if sort_by in after_cursor else None        
+
+        if sort_by:
+            if sort_order == 'asc':
+                query = query.filter(or_((orderAttr > afterSortBy), and_((orderAttr == afterSortBy), (PullRequest.id > afterId))))
+                query = query.order_by(orderAttr.asc(), PullRequest.id.asc())
+            else:
+                query = query.filter(or_((orderAttr < afterSortBy), and_((orderAttr == afterSortBy), (PullRequest.id < afterId))))
+                query = query.order_by(orderAttr.desc(), PullRequest.id.desc())
+        else:
+            query = query.filter(PullRequest.id > afterId)
+            query = query.order_by(PullRequest.id.desc() if sort_order == 'desc' else PullRequest.id.asc())
+
+    elif before:
+        query = query.filter(PullRequest.id < before)
+        query = query.order_by(PullRequest.id.desc())
+    else:
+        if sort_by:
+            query = query.order_by(orderAttr.desc() if sort_order == 'desc' else orderAttr.asc(), 
+                                   PullRequest.id.desc() if sort_order == 'desc' else PullRequest.id.asc())
+        else:
+            query = query.order_by(PullRequest.id.asc())
+
+    return query
 
 
 class PullRequestRepository:
@@ -45,10 +88,23 @@ class PullRequestRepository:
             print("Error while getting git_stats:", error)
 
 
-    def list_all(self, start_date, end_date, users_ids:list[int] = None,  managers_ids:list[int] = None, limit:int = None, after=None, before=None, order_by:str=None) -> list[PullRequest]:
+    def list_all(self, start_date, end_date, users_ids:list[int] = None,  managers_ids:list[int] = None, limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> list[PullRequest]:
         try:
             if before is not None and after is not None:
                 raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
+            
+            totalDurationFunc = cast(func.round(func.extract('epoch', PullRequest.closedAt-PullRequest.firstCommitDate) / 3600, 2), Float)
+            changesFunc = PullRequest.additions + PullRequest.deletions
+            orderAttr = None
+            if sort_by and not hasattr(PullRequest, sort_by):
+                if sort_by == 'totalDuration':
+                    orderAttr = totalDurationFunc
+                elif sort_by == 'changes':
+                    orderAttr = changesFunc
+                else:
+                    raise ValueError(f"Invalid sort_by field: {sort_by}")
+            elif sort_by:
+                orderAttr = getattr(PullRequest, sort_by) 
             
             query = self.session.query(PullRequest)
             
@@ -62,14 +118,7 @@ class PullRequestRepository:
             
             total_count = query.count()
 
-            if after:
-                query = query.filter(PullRequest.id > after)
-                query = query.order_by(PullRequest.id.asc())
-            elif before:
-                query = query.filter(PullRequest.id < before)
-                query = query.order_by(PullRequest.id.desc())
-            else:
-                query = query.order_by(PullRequest.id.asc())
+            query = add_cursor_filter(query, after, before, sort_by, orderAttr, sort_order)
             
             if limit:
                 query = query.limit(limit+1)
@@ -97,7 +146,8 @@ class PullRequestRepository:
                 PullRequest.commentsCount,
                 PullRequest.reactionsCount,
                 PullRequest.url,
-                (func.extract('epoch', PullRequest.closedAt-PullRequest.firstCommitDate) / 3600).label('totalDuration'),
+                (changesFunc).label('changes'),
+                (totalDurationFunc).label('totalDuration'),
                 User.name.label('author_name'))
             prs = query.all()
             prs = [item._asdict() for item in prs]
@@ -115,12 +165,12 @@ class PullRequestRepository:
                 prs = list(reversed(prs))
 
             if prs:
-                before_cursor = prs[0]['id'] if ((before is not None and hasMore) or after is not None)  else None
-                after_cursor = prs[-1]['id'] if hasMore or before is not None else None
+                before_cursor_item = prs[0] if ((before is not None and hasMore) or after is not None)  else None
+                after_cursor_item = prs[-1] if hasMore or before is not None else None
 
-
-            for pr in prs:
-                pr['totalDuration'] = float(round(pr['totalDuration'], 2))
+            before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by] if sort_by else None) if before_cursor_item else None
+            after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by] if sort_by else None) if after_cursor_item else None
+           
 
             return PagedResult(prs, total_count, before_cursor, after_cursor)
         except Exception as error:
