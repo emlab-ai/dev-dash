@@ -1,6 +1,5 @@
 import { Box, Container, HStack, Heading, Text, VStack, Image, useColorModeValue } from '@chakra-ui/react'
 
-import { ChakraUiIcon, ReactIcon, TypescriptIcon, ViteJsIcon } from '@assets/images'
 
 export default function Header () {
     return (

@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set working directory
+        run: cd ./server
+
       - name: Create and start virtual environment
         run: |
           python -m venv venv

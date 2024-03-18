@@ -2,15 +2,8 @@ import { useCallback, useEffect, useMemo, useState, createContext, useContext } 
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
-
-
-type User = {
-    id: string;
-    name: string;
-    managerId: string;
-    team: string;
-    isManager: boolean;
-};
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { SortingState } from '@tanstack/react-table';
 
 
 export type PullRequest = {
@@ -40,7 +33,12 @@ export type PullRequest = {
     totalDuration:number;
 };
 
-
+interface PagedResult<Data extends object> {
+    data: Data[];
+    before: string | null;
+    after: string | null;
+    total_count: number;
+}
 
 interface PullRequestsModel {
     pullRequests: PullRequest[];
@@ -50,11 +48,12 @@ interface PullRequestsModel {
     pullRequestsStats: PullRequestsStats | null;
     setTimeFilter: (timeFilter: string) => void;
     setManagerFilter: (managerFilter: number) => void;
-    fetchPullRequestsAsync: (pageAfter: any, pageBefore: any) => Promise<void>;
+    fetchPullRequestsAsync: (pageAfter: any, pageBefore: any, limit: any, sorting: any) => Promise<PagedResult<PullRequest>>;
     nextPage: () => Promise<void>;
     prevPage: () => Promise<void>;
     hasNextPage: boolean;
     hasPrevPage: boolean;
+    pullRequestQuery: ReturnType<typeof useInfiniteQuery<PullRequest>>;
 }
 
 interface PullRequestsStats {
@@ -82,10 +81,15 @@ export const usePullRequestsModel = (): PullRequestsModel => {
 
     const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
-    const fetchPullRequestsAsync = useCallback(async (pageAfter: any, pageBefore: any) => {
+    const fetchPullRequestsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<PullRequest>> => {
         try {
             if(managerFilter === 0) {
-                return;
+                return {
+                    data: [],
+                    before: null,
+                    after: null,
+                    total_count: 0
+                };
             }
 
             let args = '';
@@ -97,16 +101,30 @@ export const usePullRequestsModel = (): PullRequestsModel => {
             const response = await fetch(`http://localhost:8080/api/git/prs?page_size=30${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
             if (!result.data?.length) {
-                return;
+                return {
+                    data: [],
+                    before: null,
+                    after: null,
+                    total_count: 0
+                };
             }
 
-            setPullRequests(result.data);
-            setPageBefore(result.before);
-            setPageAfter(result.after);
-            setTotalCount(result.total_count);
+            // setPullRequests(result.data);
+            // setPageBefore(result.before);
+            // setPageAfter(result.after);
+            // setTotalCount(result.total_count);
+
+            return result;
         } catch (error) {
             console.error('Error fetching stats', error);
         }
+
+        return {
+            data: [],
+            before: null,
+            after: null,
+            total_count: 0
+        };
     }, [startDate, endDate, managerFilter]);
 
     const fetchPullRequestsStatsAsync = useCallback(async () => {
@@ -138,6 +156,19 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         await fetchPullRequestsAsync(null, pageBefore);
     }, [pageBefore]);
 
+    const {sorting, setSorting} = useState<SortingState>([]);
+    
+    const pullRequestQuery = useInfiniteQuery<PullRequest>({
+        queryKey: ['people', sorting, managerFilter, timeFilter],
+        queryFn: async ({ pageParam }) => {      
+          const fetchedData = await fetchPullRequestsAsync(pageParam, undefined, 20, sorting);
+          return fetchedData;
+        },
+        initialPageParam: "",
+        getNextPageParam: (lastPage, pages) => lastPage.after,
+        refetchOnWindowFocus: false,
+      })
+
     return {
         timeFilter,
         setTimeFilter,
@@ -148,6 +179,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
         totalCount,
         nextPage,
         prevPage,
+        pullRequestQuery,
         pullRequestsStats,
         hasNextPage: !!pageAfter,
         hasPrevPage: !!pageBefore

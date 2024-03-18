@@ -32,11 +32,11 @@ const listItems: ListItem[] = [
     icon: AiOutlineUserSwitch,
     link: '/usersstats'
   },
-  {
-    text: 'Teams',
-    icon: RiTeamFill,
-    link: '/teams'
-  },
+  // {
+  //   text: 'Teams',
+  //   icon: RiTeamFill,
+  //   link: '/teams'
+  // },
   {
     text: 'Settings',
     icon: AiOutlineSetting,
@@ -75,7 +75,7 @@ export default function Layout() {
                 </List>
             </Box>
             <Flex as="main" w='full' minH="90vh" bg={useColorModeValue('gray.50', 'gray.900')}>
-              <Box width="100%">
+              <Box width="100%" h="calc(100vh - 64px)" position="relative">
                   <Outlet/>
               </Box>
             </Flex>

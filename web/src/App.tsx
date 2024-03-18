@@ -8,22 +8,26 @@ import 'chartjs-adapter-luxon';
 import {
     Chart as ChartJS,
     registerables
-  } from 'chart.js';
-  
-  
-  ChartJS.register(
-    ...registerables
-  );
+} from 'chart.js';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-  
-export default function App () {
+
+ChartJS.register(
+    ...registerables
+);
+
+
+const queryClient = new QueryClient();
+export default function App() {
 
     return (
         <HelmetProvider>
-            <ChakraProvider theme={theme}>
-                <Font />
-                <Router />
-            </ChakraProvider>
+            <QueryClientProvider client={queryClient}>
+                <ChakraProvider theme={theme}>
+                    <Font />
+                    <Router />
+                </ChakraProvider>
+            </QueryClientProvider>
         </HelmetProvider>
     )
 }

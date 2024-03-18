@@ -19,20 +19,19 @@ const PullRequestsPage = () => {
 
     return (
         <>
-            <Box>
+            <Box display="grid" position="absolute" top={0} bottom={0} left={0} right={0} gridTemplateRows="auto auto 1fr">
                 <ScopeFilter timeFilter={timeFilter} setTimeFilter={setTimeFilter} managerFilter={managerFilter} setManagerFilter={setManagerFilter} />
-                {pullRequestsStats && 
                 <Box p={8}>
                     <HStack >
-                        <StatsSimple title="Avg: Duration" value={pullRequestsStats.avg_duration}></StatsSimple>
-                        <StatsSimple title="Avg: LoC" value={pullRequestsStats.avg_loc}></StatsSimple>
-                        <StatsSimple title="Avg: Files Changed" value={pullRequestsStats.avg_files_changed}></StatsSimple>
-                        <StatsSimple title="Avg: Comments" value={pullRequestsStats.avg_comments_count}></StatsSimple>
+                        <StatsSimple title="Avg: Duration" value={pullRequestsStats?.avg_duration ?? 0}></StatsSimple>
+                        <StatsSimple title="Avg: LoC" value={pullRequestsStats?.avg_loc ?? 0}></StatsSimple>
+                        <StatsSimple title="Avg: Files Changed" value={pullRequestsStats?.avg_files_changed ?? 0}></StatsSimple>
+                        <StatsSimple title="Avg: Comments" value={pullRequestsStats?.avg_comments_count ?? 0}></StatsSimple>
                     </HStack>
-                    </Box>
-                }
-                
-                <PrTable onClickOnLine={onClickOnLine} /> 
+                </Box>
+                <Box position="relative">
+                  <PrTable onClickOnLine={onClickOnLine} /> 
+                </Box>
             </Box>
             
             <PrDrawer isOpen={isOpen} onClose={onClose} currentItem={currentItem} />
