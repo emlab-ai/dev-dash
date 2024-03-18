@@ -30,6 +30,9 @@ jobs:
       - name: Set working directory
         run: cd ./server/src
 
+      - name: list
+        run: ls
+
       - name: Install dependencies
         run: pip install -r ./requirements.txt
         
