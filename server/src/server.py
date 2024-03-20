@@ -41,7 +41,7 @@ def serve_public(path):
 def serve_react_app():
     return send_from_directory('static/dist', 'index.html')
 
-connection_string = os.getenv('SQLALCHEMY_DATABASE_URI') #'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard'
+connection_string = os.getenv('SQL_DATABASE_URI') #'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard'
 # connection_string = 'postgresql://postgres:bonaventura@host.docker.internal:5432/developer_dashboard'
 
 
