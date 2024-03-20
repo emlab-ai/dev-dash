@@ -95,7 +95,7 @@ jobs:
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: emlabai.azurecr.io
+          login-server: emalabai.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
@@ -105,7 +105,7 @@ jobs:
           context: .
           file: ./build/Dockerfile
           push: true
-          tags: emlabai.azurecr.io/app:${{ github.sha }}
+          tags: emalabai.azurecr.io/app:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -115,7 +115,6 @@ jobs:
       # url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
-
 
     steps:
       - name: Login to Azure
