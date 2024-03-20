@@ -4,6 +4,7 @@ import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SortingState } from '@tanstack/react-table';
+import { PagedResult } from '@src/model';
 
 
 export type PullRequest = {
@@ -33,12 +34,6 @@ export type PullRequest = {
     totalDuration:number;
 };
 
-interface PagedResult<Data extends object> {
-    data: Data[];
-    before: string | null;
-    after: string | null;
-    total_count: number;
-}
 
 interface PullRequestsModel {
     timeFilter: string;
@@ -46,7 +41,7 @@ interface PullRequestsModel {
     pullRequestsStats: PullRequestsStats | null;
     setTimeFilter: (timeFilter: string) => void;
     setManagerFilter: (managerFilter: string) => void;
-    pullRequestQuery: ReturnType<typeof useInfiniteQuery<PullRequest>>;
+    pullRequestQuery: ReturnType<typeof useInfiniteQuery<PagedResult<PullRequest>>>;
     sorting: SortingState;
     setSorting: (sorting: SortingState) => void;
 }
@@ -61,12 +56,12 @@ interface PullRequestsStats {
 export const usePullRequestsModel = (): PullRequestsModel => {
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id);
+    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
     const [sorting, setSorting] = useState<SortingState>([]);
 
     useEffect(() => {
-        if (topManager) {
+        if (topManager && topManager.id) {
             setManagerFilter(topManager.id);
         }
     }, [topManager]);
@@ -96,7 +91,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                 sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
             }
 
-            const response = await fetch(`http://localhost:8080/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
+            const response = await fetch(`/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
             const result = await response.json();
             if (!result.data?.length) {
                 return {
@@ -126,7 +121,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                 return;
             }
 
-            const response = await fetch(`http://localhost:8080/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const response = await fetch(`/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
           
             setPullRequestStats(result);
@@ -140,14 +135,14 @@ export const usePullRequestsModel = (): PullRequestsModel => {
     }, [managerFilter, timeFilter])
 
     
-    const pullRequestQuery = useInfiniteQuery<PullRequest>({
+    const pullRequestQuery = useInfiniteQuery<PagedResult<PullRequest>>({
         queryKey: ['people', sorting, managerFilter, timeFilter],
         queryFn: async ({ pageParam }) => {      
           const fetchedData = await fetchPullRequestsAsync(pageParam, undefined, 20, sorting);
           return fetchedData;
         },
         initialPageParam: "",
-        getNextPageParam: (lastPage, pages) => lastPage.after,
+        getNextPageParam: (lastPage) => lastPage.after,
         refetchOnWindowFocus: false,
       })
 

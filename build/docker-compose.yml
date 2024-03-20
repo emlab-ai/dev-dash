@@ -1,0 +1,11 @@
+version: '3'
+services:
+  app:
+    build:
+      context: ../
+      dockerfile: ./build/Dockerfile    
+    environment:
+      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:bonaventura@host.docker.internal:5432/developer_dashboard
+      - DEBUG=True
+    ports:
+      - 8080:8080

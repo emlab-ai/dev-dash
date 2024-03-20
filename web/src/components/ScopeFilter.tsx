@@ -1,4 +1,4 @@
-import { Box, HStack, Select, Text } from "@chakra-ui/react"
+import { Box, HStack, Text } from "@chakra-ui/react"
 import { useCallback } from 'react';
 import DateFilterToggle from "./DateFilterToggle";
 import UserSelect from "./UserSelect";
@@ -7,8 +7,8 @@ import UserSelect from "./UserSelect";
 type ScopeFilterProps = {
   timeFilter: string;
   setTimeFilter: (timeFilter: string) => void;
-  managerFilter: number;
-  setManagerFilter: (managerFilter: number) => void;
+  managerFilter: string;
+  setManagerFilter: (managerFilter: string) => void;
 }
 
 export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, setManagerFilter }: ScopeFilterProps) {
@@ -26,7 +26,7 @@ export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, 
     <Box>
       <HStack>
         <Text>Manager:</Text>
-        <UserSelect size="sm" w="200px" isManager value={managerFilter} onChange={(e) => setManagerFilter(Number.parseInt(e.target.value))}/>        
+        <UserSelect size="sm" w="200px" isManager value={managerFilter} onChange={(e:any) => setManagerFilter(e.target.value)}/>        
       </HStack>
     </Box>
   </HStack>

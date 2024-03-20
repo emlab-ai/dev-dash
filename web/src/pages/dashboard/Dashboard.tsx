@@ -1,5 +1,5 @@
-import { AspectRatio, Badge, Box, Container, Grid, GridItem, HStack, Heading, Icon, Progress, Select, Stat, StatArrow, StatHelpText, StatLabel, StatNumber, Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack, useToken } from "@chakra-ui/react"
-import { Bar, Line } from 'react-chartjs-2';
+import { AspectRatio, Box, Container, Grid, GridItem, Heading, Stat, StatArrow, StatHelpText, StatLabel, StatNumber, Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack, useToken } from "@chakra-ui/react"
+import { Line } from 'react-chartjs-2';
 import { useColorModeValue } from "@chakra-ui/react";
 import { Suspense } from "react";
 import { LineChartData, useDashboardContext } from "@src/providers/dashboardViewModel";
@@ -72,7 +72,7 @@ const LineChart = ({ data }: { data: LineChartData }) => {
     ],
   };
 
-  const options = {
+  const options:any = {
     scales: {
       x: {
          grid: { color: gridColor },

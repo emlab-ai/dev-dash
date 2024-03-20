@@ -1,5 +1,5 @@
-import json
-from flask import Flask, jsonify, request
+import os
+from flask import Flask, jsonify, request, send_from_directory
 from flask import g
 from flask_cors import CORS
 from db.model.user import User
@@ -8,26 +8,44 @@ from sqlalchemy.orm import sessionmaker
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository
 from services.statsService import StatsService
-from services.userService import UsersService, get_manager_chain
+from services.userService import UsersService
 from utils import entity_as_dict
 from datetime import date
-from statistics import mean, median, quantiles
-
 import logging
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
-app = Flask(__name__)
-app.debug = True # Make this False if you are not debugging
+app = Flask(__name__, static_folder='static')
+app.debug = os.getenv('DEBUG')
 CORS(app) 
 
-connection_string = 'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard'
+@app.route('/assets/<path:path>')
+def serve_assets(path):
+    return send_from_directory('static/dist/assets', path)
+
+@app.route('/thumbnails/<path:path>')
+def serve_thumbnails(path):
+    return send_from_directory('static/dist/thumbnails', path)
+
+@app.route('/public/<path:path>')
+def serve_public(path):
+    return send_from_directory('static/dist/', path)
+
+@app.route('/')
+def serve_react_app():
+    return send_from_directory('static/dist', 'index.html')
+
+connection_string = os.getenv('SQLALCHEMY_DATABASE_URI') #'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard'
+# connection_string = 'postgresql://postgres:bonaventura@host.docker.internal:5432/developer_dashboard'
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
-
-
 engine = create_engine(connection_string, echo=True)
 
 Session = sessionmaker(bind=engine)
@@ -56,19 +74,6 @@ def before_request():
 def after_request(response):
     g.session.close()
     return response
-
-# @app.route('/api/users', methods=['GET'])
-# def get_users():
-#     isManager = request.args.get('isManager')
-#     userService = UserRepository(g.session)
-
-#     if isManager:
-#         users = userService.list_all_managers()
-#     else:
-#         users = userService.list_all().data
-    
-#     return jsonify([entity_as_dict(user) for user in users])
-
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -268,7 +273,6 @@ def delete_team(id:str):
     teamsRepo.delete_team(id) 
     
     return '', 204
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

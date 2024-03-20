@@ -1,16 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
-
-type User = {
-    id: string;
-    name: string;
-    managerId: string;
-    team: string;
-    gitAlias: string;
-    isManager: boolean;
-};
 
 type UserStat = {
     authorId: number;
@@ -29,16 +20,16 @@ type UserStat = {
 interface UsersStatsModel {
     usersStats: UserStat[];
     timeFilter: string;
-    managerFilter: number;
+    managerFilter: string;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: number) => void;
+    setManagerFilter: (managerFilter: string) => void;
     fetchUserStatsAsync: () => Promise<void>;
 }
 
 export const useUsersStatsModel = (): UsersStatsModel => {    
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
+    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [usersStats, setUsersStats] = useState<UserStat[]>([]);
 
     useEffect(() => {
@@ -51,11 +42,11 @@ export const useUsersStatsModel = (): UsersStatsModel => {
 
     const fetchUserStatsAsync = useCallback(async () => {
         try {
-            if(managerFilter === 0) {
+            if(!managerFilter) {
                 return;
             }
 
-            const response = await fetch(`http://localhost:8080/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const response = await fetch(`/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
             const result = await response.json();
 
             setUsersStats(result);

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export function useSearchStateParams(param: string, defaultValue?: string): [string, (value: string) => void] {
+export function useSearchStateParams(param: string, defaultValue?: string): [string, Dispatch<SetStateAction<string>>] {
     const searchParams = new URLSearchParams(location.search);
     const [value, setValue] = useState(searchParams.get(param) as string | undefined ?? defaultValue ?? "");
     const navigate = useNavigate();
@@ -21,5 +21,6 @@ export function useSearchStateParams(param: string, defaultValue?: string): [str
         });
     }, [value, navigate]);
 
-    return [value, setValue] as const;
+    return [value, setValue] as [string, Dispatch<SetStateAction<string>>];
+
 }

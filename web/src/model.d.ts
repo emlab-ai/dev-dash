@@ -27,3 +27,10 @@ export interface User {
     teamId?: string;
     teamName?: string;
 }
+
+export interface PagedResult<Data extends object> {
+    data: Data[];
+    before: string | null;
+    after: string | null;
+    total_count: number;
+}

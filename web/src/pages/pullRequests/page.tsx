@@ -1,4 +1,4 @@
-import { Box, Divider, Stat, StatLabel, StatNumber, useDisclosure, useColorModeValue, HStack } from '@chakra-ui/react';
+import { Box, Stat, StatLabel, StatNumber, useDisclosure, useColorModeValue, HStack } from '@chakra-ui/react';
 import { PullRequest, usePullRequestsContext } from '@src/providers/pullRequestsViewModel';
 import { useCallback, useState } from 'react';
 import PrDrawer from './components/PrDrawer';

@@ -1,4 +1,4 @@
-import { TableContainer, Table, Thead, Tr, Th, Tbody, Td, Box, Button, Text, useDisclosure, HStack, Icon, Link, useColorModeValue } from "@chakra-ui/react";
+import { TableContainer, Table, Thead, Tr, Th, Tbody, Td, Box, Button, useDisclosure, useColorModeValue } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import { TeamsSettingsProvider, useTeamsSettingsContext } from "./TeamsSettingsProvider";
 import Pager from "@src/components/Pager";

@@ -1,5 +1,5 @@
 import { Avatar, Text, Box, HStack, Table, TableContainer, Tag, Tbody, Td, Th, Thead, Tr, Tooltip, Link } from '@chakra-ui/react';
-import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { TableCellDate } from './TableCellDate';
 import Pager from './Pager';
 
@@ -36,7 +36,7 @@ export const usePullRequestReviewsModel = (id:number, startDate: string, endDate
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`http://localhost:8080/api/users/${userId}/reviews?start_date=${startDateStr}&end_date=${endDateStr}&page_size=10${pageStr}`);
+            const response = await fetch(`/api/users/${userId}/reviews?start_date=${startDateStr}&end_date=${endDateStr}&page_size=10${pageStr}`);
             const result = await response.json();
 
             setReviews(result.data);
@@ -125,7 +125,7 @@ const PullRequestReviewsTableImpl = () => {
             </Thead>
             <Tbody>
                 {reviews && reviews.map((review:PullRequestReview) => (
-                    <Tr>
+                    <Tr key={review.id}> 
                         <Td><Avatar size="sm" name={review.author_name}/></Td>
                         <Td><ReviewState date={review.createdAt} state={review.state}/></Td>                        
                         <Td> 

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState, createContext, useContext, useMemo } from 'react';
-import { User, useOrgProviderContext } from './orgProvider';
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
+import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { User } from '@src/model';
+import { backendClient } from '@src/clients/backendClient';
 
 type StatCue = {
     label: string;
@@ -41,20 +43,20 @@ interface DashboardModel {
     topManager: User  | undefined;
     stats: Stats;
     timeFilter: string;
-    managerFilter: number;
+    managerFilter: string;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: number) => void;
+    setManagerFilter: (managerFilter: string) => void;
     fetchStatsAsync: () => Promise<void>;
 }
 
 export const useDashboardModel = (): DashboardModel => {
     const { users, managers, topManager } = useOrgProviderContext();
     const [timeFilter, setTimeFilter] = useState('1month');
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? 0);
+    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [stats, setStats] = useState(initialStats);
 
     useEffect(() => {
-        if (topManager) {
+        if (topManager && topManager.id) {
             setManagerFilter(topManager.id);
         }
     }, [topManager]);
@@ -63,11 +65,12 @@ export const useDashboardModel = (): DashboardModel => {
 
     const fetchStatsAsync = useCallback(async () => {
         try {
-            if (managerFilter === 0) {
+            if (!managerFilter) {
                 return;
             }
-            const response = await fetch(`http://localhost:8080/api/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
-            const data = await response.json();
+
+            const response = await backendClient(`/api/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const data = await response.data;
             setStats({
                 loaded: true,
                 cues: data.cues,

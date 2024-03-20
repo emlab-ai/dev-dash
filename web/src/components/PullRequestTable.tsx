@@ -1,5 +1,5 @@
 import { ExternalLinkIcon } from "@chakra-ui/icons";
-import { useColorModeValue, Box, Text, Table, TableContainer, Tbody, Td, Th, Thead, Tr, VStack, HStack, Tag, Link, Avatar, Tooltip } from "@chakra-ui/react";
+import { Box, Text, Table, TableContainer, Tbody, Td, Th, Thead, Tr, VStack, HStack, Tag, Link, Avatar, Tooltip } from "@chakra-ui/react";
 import { PullRequest } from "@src/providers/pullRequestsViewModel";
 import { FaCodeBranch } from "react-icons/fa";
 import { TableCellDate } from "./TableCellDate";

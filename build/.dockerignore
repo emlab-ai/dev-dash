@@ -1,0 +1,13 @@
+# Ignore files and directories
+.git
+node_modules
+build
+.env
+
+# Ignore specific file types
+*.log
+*.tmp
+*.swp
+
+# Ignore hidden files and directories
+.*

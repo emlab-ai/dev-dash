@@ -1,4 +1,4 @@
-import { TableContainer, Text, Table, useColorModeValue, Thead, Tr, Th, Tbody, Td, Box, Button, Avatar, useDisclosure } from "@chakra-ui/react";
+import { TableContainer, Table, useColorModeValue, Thead, Tr, Th, Tbody, Td, Box, Button, Avatar, useDisclosure } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
 import { UsersSettingsProvider, useUsersSettingsContext } from "./UsersSettingsProvider";
 import Pager from "@src/components/Pager";

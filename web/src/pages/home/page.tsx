@@ -1,4 +1,4 @@
-import { AspectRatio, Badge, Box, Container, Divider, Grid, GridItem, HStack, Heading, Icon, Progress, Select, Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack, useToken } from "@chakra-ui/react"
+import { AspectRatio, Badge, Box, Container, Grid, GridItem, HStack, Heading, Select, Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack, useToken } from "@chakra-ui/react"
 import { Line } from 'react-chartjs-2';
 import { useColorModeValue } from "@chakra-ui/react";
 import { Suspense } from "react";
@@ -68,7 +68,7 @@ const LineChart = () => {
   const secondaryColor = useToken("colors", useColorModeValue("green.500", "green.200"));
   const tertiaryColor = useToken("colors", useColorModeValue("red.500", "red.200")) ;
 
-  const data = {
+  const data: any = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
     datasets: [
       {

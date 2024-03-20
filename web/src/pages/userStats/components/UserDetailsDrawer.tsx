@@ -1,4 +1,4 @@
-import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, VStack, Avatar, Accordion, AccordionButton, AccordionIcon, AccordionItem, AccordionPanel, TabPanels, Tabs, Tab, TabList, TabPanel, DrawerFooter } from "@chakra-ui/react";
+import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, Avatar, TabPanels, Tabs, Tab, TabList, TabPanel } from "@chakra-ui/react";
 import DateFilterToggle from "@src/components/DateFilterToggle";
 import Pager from "@src/components/Pager";
 import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
@@ -107,7 +107,7 @@ function UserDetailsContent({ userId }: { userId?: number }) {
                         <Pager nextPage={context.nextPullReqestPage} prevPage={context.prevPullReqestPage} hasNext={context.hasNextPullReqestPage} hasPrev={context.hasPrevPullReqestPage} />
                     </TabPanel>
                     <TabPanel>
-                        <PullRequestReviewsTable userId={userId} startDate={context.startDate} endDate={context.endDate} />
+                        <PullRequestReviewsTable userId={userId ?? 0} startDate={context.startDate} endDate={context.endDate} />
                     </TabPanel>
                 </TabPanels>
             </Tabs>

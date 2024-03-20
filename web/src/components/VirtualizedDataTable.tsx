@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useReactTable, flexRender, getCoreRowModel, ColumnDef, SortingState, getSortedRowModel, Row } from '@tanstack/react-table';
-import { UseInfiniteQueryResult, useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Table, Thead, Tbody, Tr, Th, Td, chakra, Icon, Tfoot, Box, VStack } from "@chakra-ui/react";
+import { Table, Thead, Tbody, Tr, Th, Td, Icon, Box, VStack } from "@chakra-ui/react";
 import { TriangleDownIcon, TriangleUpIcon } from "@chakra-ui/icons";
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { PagedResult } from '@src/model';
 
 export type VirtualizedDataTableProps<Data extends object> = {
   columns: ColumnDef<Data, any>[];
-  query: UseInfiniteQueryResult<Data, unknown>;
+  query: ReturnType<typeof useInfiniteQuery<PagedResult<Data>>>;
   onSortingChange?: (sorting: SortingState) => void;
   onRowClick?: (item: Data) => void;
 };
@@ -33,9 +34,10 @@ export function VirtualizedDataTable<Data extends object>({
     state: {
       sorting,
     },
-    onSortingChange: (s)=>{
+    onSortingChange: (s:any)=>{
       setSorting(s);
       onSortingChange && onSortingChange(s);
+      return s;
     }
   });
 

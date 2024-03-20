@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, createContext, useContext } from 'react';
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { PullRequest } from './pullRequestsViewModel';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
@@ -45,7 +45,7 @@ export const useUserDetailsModel = (id?:number): UserDetailsModel => {
 
     const fetchUserDetailsAsync = useCallback(async (id:number, startDateStr: string, endDateStr: string) => {
         try {
-            const response = await fetch(`http://localhost:8080/api/users/${id}/stats?start_date=${startDateStr}&end_date=${endDateStr}`);
+            const response = await fetch(`/api/users/${id}/stats?start_date=${startDateStr}&end_date=${endDateStr}`);
             const result = await response.json();
 
             setUser(result.user);
@@ -64,7 +64,7 @@ export const useUserDetailsModel = (id?:number): UserDetailsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`http://localhost:8080/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&user_id=${user_id}&page_size=10${pageStr}`);
+            const response = await fetch(`/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&user_id=${user_id}&page_size=10${pageStr}`);
             const result = await response.json();
 
             setPullRequests(result.data);

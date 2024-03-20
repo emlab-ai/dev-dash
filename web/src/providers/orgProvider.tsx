@@ -22,11 +22,11 @@ export const useOrgDataModel = (): OrgDataModel => {
     
     const fetchUsersAsync = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/users?page_size=1000');
+            const response = await fetch('/api/users?page_size=1000');
             const result = await response.json();
             const data = result.data;
             setUsers(data);
-            const managers = data.filter((user: User) => user.isManager).sort((a: User, b: User) => b.level.localeCompare(a.level));
+            const managers = data.filter((user: User) => user.isManager).sort((a: User, b: User) => b.level?.localeCompare(a.level ?? '')) ?? false;
             setManagers(managers);
             return data;
         } catch (error) {
@@ -36,7 +36,7 @@ export const useOrgDataModel = (): OrgDataModel => {
 
     const fetchTeamsAsync = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/teams?page_size=1000');
+            const response = await fetch('/api/teams?page_size=1000');
             const result = await response.json();
             const data = result.data;
             setTeams(data);

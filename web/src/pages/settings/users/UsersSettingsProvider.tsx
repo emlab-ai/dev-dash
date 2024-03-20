@@ -1,6 +1,6 @@
 import { User } from "@src/model";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface UsersSettingsModel {
     users: User[];
@@ -47,7 +47,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`http://localhost:8080/api/users?page_size=20${pageStr}`);
+            const response = await fetch(`/api/users?page_size=20${pageStr}`);
             const result = await response.json();
 
             setUsers(result.data);
@@ -67,7 +67,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             body: JSON.stringify(user)
         };
 
-        const response = await fetch('http://localhost:8080/api/users', requestInfo);
+        const response = await fetch('/api/users', requestInfo);
         const result = await response.json();
         setUsers((users) => [...users, result]);
     }, []);
@@ -80,7 +80,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             body: JSON.stringify(user)
         };
 
-        const response = await fetch('http://localhost:8080/api/users', requestInfo);
+        const response = await fetch('/api/users', requestInfo);
         const result = await response.json();
 
         setUsers((users) => {
@@ -96,7 +96,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             method: 'DELETE'
         };
 
-        const response = await fetch(`http://localhost:8080/api/users/${userId}`, requestInfo);
+        const response = await fetch(`/api/users/${userId}`, requestInfo);
         if (response.status !== 204) {
             console.error('Error deleting a user');
             return;

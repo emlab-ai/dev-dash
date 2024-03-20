@@ -25,7 +25,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`http://localhost:8080/api/teams?page_size=20${pageStr}`);
+            const response = await fetch(`/api/teams?page_size=20${pageStr}`);
             const result = await response.json();
 
             setTeams(result.data);
@@ -45,7 +45,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             body: JSON.stringify(team)
         };
 
-        const response = await fetch('http://localhost:8080/api/teams', requestInfo);
+        const response = await fetch('/api/teams', requestInfo);
         const result = await response.json();
         setTeams((teams)=>[...teams, result]);
     }, [])
@@ -59,7 +59,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             body: JSON.stringify(team)
         };
 
-        const response = await fetch('http://localhost:8080/api/teams', requestInfo);
+        const response = await fetch('/api/teams', requestInfo);
         const result = await response.json();
         
         setTeams((teams)=>{
@@ -76,7 +76,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             method: 'DELETE'
         };
 
-        const response = await fetch(`http://localhost:8080/api/teams/${teamId}`, requestInfo);
+        const response = await fetch(`/api/teams/${teamId}`, requestInfo);
         if (response.status !== 204) {
             console.error('Error deleting team');
             return;

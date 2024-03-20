@@ -1,10 +1,9 @@
 import { Box, Flex, HStack, Heading, IconButton, List, ListIcon, ListItem, Text,  useColorModeValue, useDisclosure  } from '@chakra-ui/react'
 import { BiMenu } from 'react-icons/bi'
-import { AiOutlineHome, AiOutlineSetting, AiOutlineUserSwitch, AiOutlineFolderOpen, AiOutlineUser, AiFillGithub } from 'react-icons/ai'
-import { RiTeamFill, RiTodoLine } from 'react-icons/ri'
+import { AiOutlineHome, AiOutlineSetting, AiOutlineUserSwitch, AiOutlineUser, AiFillGithub } from 'react-icons/ai'
 import { IoEarthOutline } from 'react-icons/io5'
 
-import { Head, PreviewOptionsNavbar, ThemeToggle } from '@components/index'
+import { Head, ThemeToggle } from '@components/index'
 import { BrandName } from '@src/constants'
 import { Link, Outlet } from 'react-router-dom'
 
