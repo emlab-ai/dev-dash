@@ -1,3 +1,82 @@
+# # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# # More GitHub Actions for Azure: https://github.com/Azure/actions
+# # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+# name: Build and deploy Python app to Azure Web App - DevDashAI
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Set up Python version
+#         uses: actions/setup-python@v1
+#         with:
+#           python-version: '3.12'
+
+#       - name: Create and start virtual environment
+#         run: |
+#           python -m venv venv
+#           source venv/bin/activate
+      
+#       - name: Install dependencies
+#         run: pip install -r requirements.txt
+        
+#       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+
+#       - name: Zip artifact for deployment
+#         run: zip release.zip ./* -r
+
+#       - name: Upload artifact for deployment jobs
+#         uses: actions/upload-artifact@v3
+#         with:
+#           name: python-app
+#           path: |
+#             release.zip
+#             !venv/
+
+#   deploy:
+#     runs-on: ubuntu-latest
+#     needs: build
+#     environment:
+#       name: 'Production'
+#       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+#     permissions:
+#       id-token: write #This is required for requesting the JWT
+
+#     steps:
+#       - name: Download artifact from build job
+#         uses: actions/download-artifact@v3
+#         with:
+#           name: python-app
+
+#       - name: Unzip artifact for deployment
+#         run: unzip release.zip
+
+      
+#       - name: Login to Azure
+#         uses: azure/login@v1
+#         with:
+#           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5021706B0FF747B7A333D5D813E6178B }}
+#           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0626EB55CC9F405FBE6E83DA137275EC }}
+#           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CDB77B6F296E4CE5B10555A6E00DCA13 }}
+
+#       - name: 'Deploy to Azure Web App'
+#         uses: azure/webapps-deploy@v2
+#         id: deploy-to-webapp
+#         with:
+#           app-name: 'DevDashAI'
+#           slot-name: 'Production'
+          
+
 name: Build and deploy Python app to Azure Functions - emlabai
 
 on:
@@ -11,8 +90,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5021706B0FF747B7A333D5D813E6178B }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0626EB55CC9F405FBE6E83DA137275EC }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CDB77B6F296E4CE5B10555A6E00DCA13 }}
+  
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: emlabai.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -20,7 +113,7 @@ jobs:
           context: .
           file: ./build/Dockerfile
           push: true
-          tags: emlabai/app:${{ github.sha }}
+          tags: emlabai.azurecr.io/app:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -29,7 +122,17 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5021706B0FF747B7A333D5D813E6178B }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0626EB55CC9F405FBE6E83DA137275EC }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CDB77B6F296E4CE5B10555A6E00DCA13 }}
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: <your-acr-login-server>
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
 
       - name: Run Docker container in Azure Functions
-        run: az container create --resource-group emlabai --name app --image emlabai/app:${{ github.sha }} --dns-name-label myapp --ports 80
+        run: az container create --resource-group DevDashAI_group --name app --image emlabai/app:${{ github.sha }} --dns-name-label myapp --ports 80
