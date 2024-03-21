@@ -112,7 +112,6 @@ jobs:
     needs: build
     environment:
       name: 'Production'
-      # url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
 
@@ -120,14 +119,12 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5021706B0FF747B7A333D5D813E6178B }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0626EB55CC9F405FBE6E83DA137275EC }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CDB77B6F296E4CE5B10555A6E00DCA13 }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
-          login-server: <your-acr-login-server>
+          login-server: emalabai.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
