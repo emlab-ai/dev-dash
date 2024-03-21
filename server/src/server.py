@@ -33,6 +33,10 @@ def serve_assets(path):
 def serve_thumbnails(path):
     return send_from_directory('static/dist/thumbnails', path)
 
+@app.route('/.well-known/<path:path>')
+def serve_well_known(path):
+    return send_from_directory('static/dist/.well-known', path)
+
 @app.route('/public/<path:path>')
 def serve_public(path):
     return send_from_directory('static/dist/', path)
@@ -276,3 +280,7 @@ def delete_team(id:str):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+
+    
+
+    
