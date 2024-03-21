@@ -131,6 +131,7 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-
-      - name: Run Docker container in Azure Functions
-        run: az container create --resource-group DevDashAI_group --name app --image emlabai/app:${{ github.sha }} --dns-name-label myapp --ports 80
+      - uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'emlabai'
+          images: 'emalabai.azurecr.io/app:${{ github.sha }}'
