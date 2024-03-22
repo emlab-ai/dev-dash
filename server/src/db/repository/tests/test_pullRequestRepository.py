@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from db.repository import PullRequestRepository
 from db.model import PullRequest
 
+
 class PullRequestRepositoryTests(unittest.TestCase):
     def setUp(self):
         # Create an in-memory SQLite database for testing

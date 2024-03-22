@@ -2,12 +2,11 @@ import { AspectRatio, Badge, Box, Container, Grid, GridItem, HStack, Heading, Se
 import { Line } from 'react-chartjs-2';
 import { useColorModeValue } from "@chakra-ui/react";
 import { Suspense } from "react";
-import { DashboardProvider, useDashboardContext } from "@src/providers/dashboardViewModel";
+import { useDashboardContext } from "@src/providers/dashboardViewModel";
 
 
 export default function DashboardPage() {
   return (
-    <DashboardProvider>
     <Box bg="gray.50" minH="100vh" py="4">
     
     <HStack justify="space-between" px="4">
@@ -55,7 +54,6 @@ export default function DashboardPage() {
         </TabPanels>
       </Tabs>
     </Box>
-    </DashboardProvider>
   )
 }
 

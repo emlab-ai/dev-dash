@@ -1,7 +1,10 @@
+import base64
+import json
 import os
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory
 from flask import g
 from flask_cors import CORS
+import requests
 from db.model.user import User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -10,20 +13,123 @@ from db.repository import PullRequestRepository, UserRepository, PullRequestRevi
 from services.statsService import StatsService
 from services.userService import UsersService
 from utils import entity_as_dict
-from datetime import date
 import logging
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
+from datetime import datetime
+import app_config
+import jwt
+from jwcrypto import jwk
 
-load_dotenv()
 
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-
 app = Flask(__name__, static_folder='static')
 app.debug = os.getenv('DEBUG')
 CORS(app) 
+
+
+jwks = {}
+
+def get_key_for_tenant(tenant_id: str):
+    global jwks
+    if jwks.get(tenant_id) is None:
+        metadata_url = f"https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration"
+        metadata = requests.get(metadata_url).json()
+
+        # Fetch the JWKs used for validating token signatures
+        signing_algos = metadata["id_token_signing_alg_values_supported"]
+        jwks_url = metadata["jwks_uri"]
+        # setup a PyJWKClient to get the appropriate signing key
+        jwks_client = jwt.PyJWKClient(jwks_url)
+
+        keys = requests.get(jwks_url).json()
+        jwks[tenant_id] = keys
+    
+    return jwks[tenant_id]
+
+
+def get_token_auth_header():
+    """Obtains the Access Token from the Authorization Header"""
+    auth = request.headers.get("Authorization", None)
+    if not auth:
+        raise Exception("Authorization header is expected")
+
+    parts = auth.split()
+
+    if parts[0].lower() != "bearer":
+        raise Exception("Authorization header must start with Bearer")
+    elif len(parts) == 1:
+        raise Exception("Token not found")
+    elif len(parts) > 2:
+        raise Exception("Authorization header must be Bearer token")
+
+    token = parts[1]
+    return token
+
+def validate_token(token):
+    try:
+        # Specify your API's audience value and issuer
+        claims_options = {
+            "aud": {"essential": True, "value":  "00000003-0000-0000-c000-000000000000"},
+        }
+
+        header_part = token.split('.')[0]
+        header_data = base64.urlsafe_b64decode(header_part + '==')
+        header = json.loads(header_data.decode('utf-8'))
+        kid = header['kid']
+
+        body_part = token.split('.')[1]
+        body_data = base64.urlsafe_b64decode(body_part + '==')
+        body = json.loads(body_data.decode('utf-8'))
+        tenant_id = body['tid']
+
+        jwks = get_key_for_tenant(tenant_id)
+        unverified_header = jwt.get_unverified_header(token)
+        rsa_key = {}
+        for key in jwks["keys"]:
+            if key["kid"] == unverified_header["kid"]:
+                rsa_key = {
+                    "kty": key["kty"],
+                    "kid": key["kid"],
+                    "use": key["use"],
+                    "n": key["n"],
+                    "e": key["e"]
+                }
+        if rsa_key:
+            payload = jwt.decode(token, key=rsa_key, algorithms=["RS256"])
+
+        
+        key = [key for key in jwks['keys'] if key['kid'] == kid]
+        
+        pem = jwk.JWK(**key[0]).export_to_pem()
+        pem = b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4Se/fC9EIpOU3UbAYq8w\nIujF9EAsZ7OKQM6DFR5iNPKv4tu3DM2K877NsXq4fSJDFS4/dpYkMPT0yyLMxkWZ\nBf+Cp9UyOvPtD9015AQazxSHD1yvd6IOTdpAHavzbSqd7+JL6O2Sgm38YZCsT3bR\nA0qaLMlWlT+G44822/avkCj2UAfSx7zPd1ppf3WgJpZtwmsBwhbXiYQHryrioFpM\njnq40Xic6aWyQwWc6XSKBStzwfeTZ4V5JIC0MuQQxvqrTmhcagimKZY/HUcmruBK\nOHRTF4QASI+Cg/49El0J9LUJIDrApuE8hYCYlG/gmz/tvLXmwv5j2KS0CDg9lzPO\nywIDAQAB\n-----END PUBLIC KEY-----"
+        claim = jwt.decode(token, key=pem, algorithms=header['alg'])
+        # Validate token claims etc.
+        claim.validate()
+        return claim
+    except Exception as e:
+        raise Exception(f"Token validation failed: {str(e)}")
+    
+# -----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4Se/fC9EIpOU3UbAYq8w\nIujF9EAsZ7OKQM6DFR5iNPKv4tu3DM2K877NsXq4fSJDFS4/dpYkMPT0yyLMxkWZ\nBf+Cp9UyOvPtD9015AQazxSHD1yvd6IOTdpAHavzbSqd7+JL6O2Sgm38YZCsT3bR\nA0qaLMlWlT+G44822/avkCj2UAfSx7zPd1ppf3WgJpZtwmsBwhbXiYQHryrioFpM\njnq40Xic6aWyQwWc6XSKBStzwfeTZ4V5JIC0MuQQxvqrTmhcagimKZY/HUcmruBK\nOHRTF4QASI+Cg/49El0J9LUJIDrApuE8hYCYlG/gmz/tvLXmwv5j2KS0CDg9lzPO\nywIDAQAB\n-----END PUBLIC KEY-----
+    
+#'-----BEGIN PUBLIC KEY-----
+# MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvRIL3aZt+xVqOZgMOr71
+# ltWe9YY2Wf/B28C4Jl2nBSTEcFnf/eqOHZ8yzUBbLc4Nti2/ETcCsTUNuzS368BW
+# kSgxc45JBH1wFSoWNFUSXaPt8mRwJYTF0H32iNhw/tBb9mvdQVgVs4Ci0dVJRYiz
+# +ilk3PeO8wzlwRuwWIsaKFYlMyOKG9DVFbg93DmP5Tjq3C3oJlATyhAiJJc1T2tr
+# EP8960an33dDEaWwVAHh3c/34meAO4R6kLzIq0JnSsZMYB9O/6bMyIlzxmdZ8F44
+# 2SynCUHxhnIh3yZew+xDdeHr6Ofl7KeVUcvSiZP9X44CaVJvknXQbBYNl+H7YF5R
+# gQIDAQAB
+
+def authorize_api_endpoints():
+    if not request.path.startswith('/api/'):
+        return
+    
+    # Get the token from the Authorization header
+    token = get_token_auth_header()
+    if not token or not validate_token(token):
+        abort(401, description="Invalid or missing token.")
+    
 
 @app.route('/assets/<path:path>')
 def serve_assets(path):
@@ -73,6 +179,7 @@ def _get_request_scope_args(request) -> tuple[int, datetime, datetime]:
 @app.before_request
 def before_request():
     g.session = Session()
+    authorize_api_endpoints()
 
 @app.after_request
 def after_request(response):

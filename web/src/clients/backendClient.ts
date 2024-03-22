@@ -1,7 +1,17 @@
+import { useAuth } from '@src/providers/authProvider';
 import axios from 'axios';
+import { useMemo } from 'react';
 
-// Create an instance of axios with predefined configurations
-export const backendClient = axios.create({
-  timeout: 3000, // request timeout
-  headers: {'X-Custom-Header': 'foobar'} // any custom headers
-});
+export function useAxiosClient() {
+  const { token } = useAuth();
+
+  const client = useMemo(() => axios.create({
+    timeout: 3000,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    }
+  }), [token]);
+
+  return client;
+}

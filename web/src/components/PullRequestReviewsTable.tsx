@@ -2,6 +2,7 @@ import { Avatar, Text, Box, HStack, Table, TableContainer, Tag, Tbody, Td, Th, T
 import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { TableCellDate } from './TableCellDate';
 import Pager from './Pager';
+import { useAxiosClient } from '@src/clients/backendClient';
 
 interface PullRequestReviewsModel {
     reviews: PullRequestReview[] | null;
@@ -27,6 +28,7 @@ export const usePullRequestReviewsModel = (id:number, startDate: string, endDate
     const [reviews, setReviews] = useState<PullRequestReview[]>([]);
     const [reviewsBefore, setReviewsBefore] = useState<string|null>(null);
     const [reviewsAfter, setReviewsAfter] = useState<string|null>(null);
+    const backendClient = useAxiosClient();
 
     const fetchReviewsAsync = useCallback(async (userId:number, startDateStr: string, endDateStr: string, before?: string, after?: string) => {
         try {
@@ -36,8 +38,8 @@ export const usePullRequestReviewsModel = (id:number, startDate: string, endDate
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`/api/users/${userId}/reviews?start_date=${startDateStr}&end_date=${endDateStr}&page_size=10${pageStr}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/users/${userId}/reviews?start_date=${startDateStr}&end_date=${endDateStr}&page_size=10${pageStr}`);
+            const result = await response.data;
 
             setReviews(result.data);
             setReviewsBefore(result.before);
@@ -45,7 +47,7 @@ export const usePullRequestReviewsModel = (id:number, startDate: string, endDate
         } catch (error) {
             console.error('Error fetching reviews', error);
         }
-    }, []);
+    }, [backendClient]);
 
     useEffect(() => {
         fetchReviewsAsync(id, startDate, endDate);

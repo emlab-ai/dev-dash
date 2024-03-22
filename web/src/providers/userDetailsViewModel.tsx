@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, createContext, useContext } from 'rea
 import { PullRequest } from './pullRequestsViewModel';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
+import { useAxiosClient } from '@src/clients/backendClient';
 
 type User = {
     id: string;
@@ -40,13 +41,14 @@ export const useUserDetailsModel = (id?:number): UserDetailsModel => {
     const [pullRequestsAfter, setPullRequestsAfter] = useState<string|null>(null);
     const [userPrsChart, setUserPrsChart] = useState<ChartData | null>(null);
     const [userReviewsChart, setUserReviewsChart] = useState<ChartData | null>(null);
-
     const {startDate, endDate} = useTimeFilterDates(timeFilter);
+
+    const backendClient = useAxiosClient();
 
     const fetchUserDetailsAsync = useCallback(async (id:number, startDateStr: string, endDateStr: string) => {
         try {
-            const response = await fetch(`/api/users/${id}/stats?start_date=${startDateStr}&end_date=${endDateStr}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/users/${id}/stats?start_date=${startDateStr}&end_date=${endDateStr}`);
+            const result = await response.data;
 
             setUser(result.user);
             setUserPrsChart(result.prsCount);

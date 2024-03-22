@@ -1,3 +1,4 @@
+import { useAxiosClient } from "@src/clients/backendClient";
 import { User } from "@src/model";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +23,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
     const searchParams = new URLSearchParams(location.search);
     const [cursor, setCursor] = useState(searchParams.get('cursor') as string | undefined ?? "");
     const navigate = useNavigate();
+    const backendClient = useAxiosClient();
 
 
     useEffect(() => {
@@ -47,8 +49,8 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`/api/users?page_size=20${pageStr}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/users?page_size=20${pageStr}`);
+            const result = await response.data;
 
             setUsers(result.data);
             setUsersBefore(result.before);
@@ -57,7 +59,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         } catch (error) {
             console.error('Error fetching reviews', error);
         }
-    }, []);
+    }, [backendClient]);
 
     const createUserAsync = useCallback(async (user: User) => {
         var requestInfo = {
@@ -67,10 +69,10 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             body: JSON.stringify(user)
         };
 
-        const response = await fetch('/api/users', requestInfo);
-        const result = await response.json();
+        const response = await backendClient('/api/users', requestInfo);
+        const result = await response.data;
         setUsers((users) => [...users, result]);
-    }, []);
+    }, [backendClient, setUsers]);
 
     const updateUserAsync = useCallback(async (user: User) => {
         var requestInfo = {
@@ -80,8 +82,8 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             body: JSON.stringify(user)
         };
 
-        const response = await fetch('/api/users', requestInfo);
-        const result = await response.json();
+        const response = await backendClient('/api/users', requestInfo);
+        const result = await response.data;
 
         setUsers((users) => {
             var index = users.findIndex(u => u.id === user.id);
@@ -89,24 +91,24 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
             res[index] = result;
             return res;
         });
-    }, [users]);
+    }, [users, backendClient, setUsers]);
 
     const deleteUserAsync = useCallback(async (userId: string) => {
         var requestInfo = {
             method: 'DELETE'
         };
 
-        const response = await fetch(`/api/users/${userId}`, requestInfo);
+        const response = await backendClient(`/api/users/${userId}`, requestInfo);
         if (response.status !== 204) {
             console.error('Error deleting a user');
             return;
         }
         setUsers((users) => users.filter(t => t.id !== userId));
-    }, []);
+    }, [backendClient, setUsers]);
 
     const refreshAsync = useCallback(async () => {
         fetchUsersAsync(undefined, cursor);
-    }, [cursor])
+    }, [cursor, fetchUsersAsync])
 
     useEffect(() => {
         refreshAsync();

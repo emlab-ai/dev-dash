@@ -1,3 +1,4 @@
+import { useAxiosClient } from '@src/clients/backendClient';
 import { Team, User } from '@src/model';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
@@ -19,11 +20,12 @@ export const useOrgDataModel = (): OrgDataModel => {
     const [users, setUsers] = useState<User[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [managers, setManagers] = useState<User[]>([]);
+    const backendClient = useAxiosClient();
     
     const fetchUsersAsync = async () => {
         try {
-            const response = await fetch('/api/users?page_size=1000');
-            const result = await response.json();
+            const response = await backendClient('/api/users?page_size=1000');
+            const result = await response.data;
             const data = result.data;
             setUsers(data);
             const managers = data.filter((user: User) => user.isManager).sort((a: User, b: User) => b.level?.localeCompare(a.level ?? '')) ?? false;

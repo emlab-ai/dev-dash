@@ -1,6 +1,5 @@
 import {  ChakraProvider, useToast } from '@chakra-ui/react'
 import { HelmetProvider } from 'react-helmet-async'
-
 import { Font, theme } from '@theme/config'
 import Router from '@routes/index'
 import 'chartjs-adapter-luxon';
@@ -11,6 +10,7 @@ import {
 } from 'chart.js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
+import { AuthContextProvider } from './providers/authProvider';
 
 
 ChartJS.register(
@@ -51,14 +51,16 @@ export default function App() {
         return () => unsubscribe();
       }, [queryClient]);
 
-    return (
-        <HelmetProvider>
-            <QueryClientProvider client={queryClient}>
-                <ChakraProvider theme={theme}>
-                    <Font />
-                    <Router />
-                </ChakraProvider>
-            </QueryClientProvider>
-        </HelmetProvider>
+    return (        
+        <AuthContextProvider>
+            <HelmetProvider>
+                <QueryClientProvider client={queryClient}>
+                    <ChakraProvider theme={theme}>
+                        <Font />
+                        <Router />
+                    </ChakraProvider>
+                </QueryClientProvider>
+            </HelmetProvider>
+        </AuthContextProvider>
     )
 }

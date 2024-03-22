@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, createContext, useContext } from 'rea
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { User } from '@src/model';
-import { backendClient } from '@src/clients/backendClient';
+import { useAxiosClient } from '@src/clients/backendClient';
 
 type StatCue = {
     label: string;
@@ -54,6 +54,7 @@ export const useDashboardModel = (): DashboardModel => {
     const [timeFilter, setTimeFilter] = useState('1month');
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [stats, setStats] = useState(initialStats);
+    const backendClient = useAxiosClient();
 
     useEffect(() => {
         if (topManager && topManager.id) {
@@ -79,7 +80,7 @@ export const useDashboardModel = (): DashboardModel => {
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [managerFilter, startDate, endDate]);
+    }, [managerFilter, startDate, endDate, backendClient]);
 
 
     useEffect(() => {
