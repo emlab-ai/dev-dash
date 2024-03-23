@@ -66,8 +66,8 @@ export const useUserDetailsModel = (id?:number): UserDetailsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await fetch(`/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&user_id=${user_id}&page_size=10${pageStr}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&user_id=${user_id}&page_size=10${pageStr}`);
+            const result = await response.data;
 
             setPullRequests(result.data);
             setPullRequestsBefore(result.before);
@@ -75,7 +75,7 @@ export const useUserDetailsModel = (id?:number): UserDetailsModel => {
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, []);
+    }, [backendClient]);
 
 
     useEffect(() => {

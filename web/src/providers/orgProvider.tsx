@@ -1,6 +1,6 @@
 import { useAxiosClient } from '@src/clients/backendClient';
 import { Team, User } from '@src/model';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 interface OrgDataModel {
     users: User[];
@@ -22,7 +22,7 @@ export const useOrgDataModel = (): OrgDataModel => {
     const [managers, setManagers] = useState<User[]>([]);
     const backendClient = useAxiosClient();
     
-    const fetchUsersAsync = async () => {
+    const fetchUsersAsync = useCallback(async () => {
         try {
             const response = await backendClient('/api/users?page_size=1000');
             const result = await response.data;
@@ -34,18 +34,18 @@ export const useOrgDataModel = (): OrgDataModel => {
         } catch (error) {
             console.error('Error fetching users', error);
         }
-    };
+    }, [backendClient]);
 
-    const fetchTeamsAsync = async () => {
+    const fetchTeamsAsync = useCallback(async () => {
         try {
-            const response = await fetch('/api/teams?page_size=1000');
-            const result = await response.json();
+            const response = await backendClient('/api/teams?page_size=1000');
+            const result = await response.data;
             const data = result.data;
             setTeams(data);
         } catch (error) {
             console.error('Error fetching users', error);
         }
-    };
+    }, [backendClient]);
 
     const topManager = useMemo(()=>managers.find((manager) => manager.managerId === manager.id), [managers]);
 

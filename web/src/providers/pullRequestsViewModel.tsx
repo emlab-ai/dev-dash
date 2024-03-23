@@ -5,6 +5,7 @@ import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SortingState } from '@tanstack/react-table';
 import { PagedResult } from '@src/model';
+import { useAxiosClient } from '@src/clients/backendClient';
 
 
 export type PullRequest = {
@@ -59,6 +60,7 @@ export const usePullRequestsModel = (): PullRequestsModel => {
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
     const [sorting, setSorting] = useState<SortingState>([]);
+    const backendClient = useAxiosClient();
 
     useEffect(() => {
         if (topManager && topManager.id) {
@@ -91,8 +93,8 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                 sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
             }
 
-            const response = await fetch(`/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
+            const result = await response.data;
             if (!result.data?.length) {
                 return {
                     data: [],
@@ -121,14 +123,14 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                 return;
             }
 
-            const response = await fetch(`/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const result = await response.data;
           
             setPullRequestStats(result);
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [startDate, endDate, managerFilter]);
+    }, [startDate, endDate, managerFilter, backendClient]);
 
     useEffect(() => {
         fetchPullRequestsStatsAsync();

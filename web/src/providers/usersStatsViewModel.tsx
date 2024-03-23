@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, createContext, useContext } from 'rea
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
+import { useAxiosClient } from '@src/clients/backendClient';
 
 type UserStat = {
     authorId: number;
@@ -31,6 +32,7 @@ export const useUsersStatsModel = (): UsersStatsModel => {
     const { topManager } = useOrgProviderContext();
     const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
     const [usersStats, setUsersStats] = useState<UserStat[]>([]);
+    const backendClient = useAxiosClient();
 
     useEffect(() => {
         if (topManager && topManager.id) {
@@ -46,14 +48,14 @@ export const useUsersStatsModel = (): UsersStatsModel => {
                 return;
             }
 
-            const response = await fetch(`/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
-            const result = await response.json();
+            const response = await backendClient(`/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const result = await response.data;
 
             setUsersStats(result);
         } catch (error) {
             console.error('Error fetching stats', error);
         }
-    }, [startDate, endDate, managerFilter]);
+    }, [startDate, endDate, managerFilter, backendClient]);
 
 
     useEffect(() => {
