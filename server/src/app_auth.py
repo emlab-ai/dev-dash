@@ -3,7 +3,6 @@
 
 from flask import abort, request
 import app_config
-from jwcrypto import jwk
 from jose import jwt
 from jose.exceptions import JWTError
 import requests

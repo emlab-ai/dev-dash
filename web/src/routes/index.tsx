@@ -11,7 +11,7 @@ import { UsersStatsProvider } from '@src/providers/usersStatsViewModel'
 import UsersStatsPage from '@src/pages/userStats/page'
 import TeamsSettings from '@src/pages/settings/teams/TeamsSettings'
 import UsersSettings from '@src/pages/settings/users/UsersSettings'
-import { AuthenticatedTemplate, UnauthenticatedTemplate, useMsal } from '@azure/msal-react';
+import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import UnauthenticatedLayout from '@src/pages/layouts/UnauthenticatedLayout'
 import { Box, Text } from '@chakra-ui/react'
 

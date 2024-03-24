@@ -18,6 +18,9 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
+# Install GCC and other build tools
+RUN apk add --no-cache gcc musl-dev python3-dev libffi-dev openssl-dev cargo
+
 # Install the required dependencies
 COPY --from=builder /server /app
 # Copy the built web app from the builder stage
