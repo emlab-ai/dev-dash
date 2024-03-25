@@ -30,12 +30,9 @@ jobs:
           context: .
           file: ./build/Dockerfile
           push: true
-          tags: emalabai.azurecr.io/app:${{ github.sha }}
+          tags: emalabai.azurecr.io/app:${{ github.sha }}      
 
-      - name: Deploy functions
-        run: /server/functions/emlabevents/deploy.sh
-
-  deploy:
+  deploy-app:
     runs-on: ubuntu-latest
     needs: build
     environment:
@@ -44,6 +41,8 @@ jobs:
       id-token: write #This is required for requesting the JWT
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -51,6 +50,7 @@ jobs:
 
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
+        id: login
         with:
           login-server: emalabai.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
@@ -60,3 +60,22 @@ jobs:
         with:
           app-name: 'emlabai'
           images: 'emalabai.azurecr.io/app:${{ github.sha }}'
+
+  deploy-functions:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+    permissions:
+      id-token: write 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy functions            
+        run: ./server/functions/emlabevents/deploy.sh
