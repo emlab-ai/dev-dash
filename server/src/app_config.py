@@ -30,3 +30,8 @@ SCOPE = ["User.ReadBasic.All"]
 SESSION_TYPE = "filesystem"
 # Using the file system will not work in most production systems,
 # it's better to use a database-backed session store instead.
+
+
+EVENT_HUB_CONNECTION = os.getenv('EVENT_HUB_CONNECTION')
+
+EVENT_HUB_GITHUB = os.getenv('EVENT_HUB_GITHUB', "githubevents")

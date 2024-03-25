@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository
 from app_auth import validate_token
+from services.githubService import GithubService
 from services.statsService import StatsService
 from services.userService import UsersService
 from utils import entity_as_dict
@@ -262,6 +263,28 @@ def create_team():
     result = teamsRepo.create_team(team) 
     
     return jsonify(entity_as_dict(result))
+
+@app.route('/wh/github', methods=['POST'])
+def github_wh_callback():
+    event = request.headers["X-GitHub-Event"]
+    deliveryId = request.headers["X-GitHub-Delivery"]
+    signature = request.headers["X-Hub-Signature-256"]
+    userAgent = request.headers["User-Agent"]
+    installationTargetType = request.headers["X-GitHub-Hook-Installation-Target-Type"]
+    installationTargetId = request.headers["X-GitHub-Hook-Installation-Target-Id"]
+
+    if not userAgent.startswith("GitHub-Hookshot/"):
+        print(f"Invalid user agent: {userAgent}")
+        return "", 404
+
+    data = request.get_json()
+    
+    githubService = GithubService()
+    # TODO: vlidate signature
+    githubService.record_event(event, deliveryId, installationTargetType, installationTargetId, data)
+    
+    return "", 200
+
 
 @app.route('/api/teams', methods=['PUT'])
 def update_team():
