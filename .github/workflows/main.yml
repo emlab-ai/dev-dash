@@ -93,5 +93,5 @@ jobs:
           az functionapp deployment source config-zip \
               --resource-group DevDashAI_group \
               --name emlabevents \
-              --src ./release-artifiacts/functionapp.zip \
+              --src ./functionapp.zip \
               --build-remote true
