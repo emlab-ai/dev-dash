@@ -33,7 +33,7 @@ jobs:
           tags: emalabai.azurecr.io/app:${{ github.sha }}      
 
       - name: Zip folder
-        run: zip -r functionapp.zip ../server/src -x "*.git*" "*__pycache__*" "*deploy.sh*" ".venv/*"
+        run: zip -r functionapp.zip ./server/src -x "*.git*" "*__pycache__*" "*deploy.sh*" ".venv/*"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
