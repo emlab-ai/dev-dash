@@ -9,8 +9,15 @@ class GithubService:
             with producer:
                 event_batch = producer.create_batch()
 
-                # Serialize your data to JSON format
-                data_bytes = json.dumps(data).encode('utf-8')
+                body = {
+                    "data": data,
+                    "event_type": event,
+                    "delivery_id": deliveryId,
+                    "installation_target_type": installationTargetType,
+                    "installation_target_id": installationTargetId 
+                }
+                
+                data_bytes = json.dumps(body).encode('utf-8')
 
                 # Wrap the data in an EventData object
                 event_data = EventData(body=data_bytes)

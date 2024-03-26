@@ -29,3 +29,12 @@ dist-ssr
 __pycache__
 __pycache__/*
 .pytest_cache/*
+
+__blobstorage__
+ __blobstorage__/*
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+__azurite_db_queue__.json
+__azurite_db_queue_extent__.json
+ *.zip
+
