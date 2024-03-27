@@ -14,6 +14,7 @@ import UsersSettings from '@src/pages/settings/users/UsersSettings'
 import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
 import UnauthenticatedLayout from '@src/pages/layouts/UnauthenticatedLayout'
 import { Box, Text } from '@chakra-ui/react'
+import OrgSettings from '@src/pages/settings/org/OrgSettings'
 
 
 export default function Router () {
@@ -26,7 +27,8 @@ export default function Router () {
                             <Route path="pullrequests" element={<PullRequestsProvider><PullRequestsPage /></PullRequestsProvider>} />
                             <Route path="usersstats/:id?" element={<UsersStatsProvider><UsersStatsPage /></UsersStatsProvider>} />
                             <Route path="settings" element={ <SettingsPage />}>
-                                <Route index element={<Navigate replace to="/settings/teams" />} />
+                                <Route index element={<Navigate replace to="/settings/organisation" />} />
+                                <Route path="organisation" element={<OrgSettings />} />
                                 <Route path="teams" element={<TeamsSettings />} />
                                 <Route path="users" element={<UsersSettings />} />
                             </Route>         

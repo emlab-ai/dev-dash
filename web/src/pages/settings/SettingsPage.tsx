@@ -2,6 +2,10 @@ import SecondaryNavSidebar from "../layouts/SecondaryNavSidebar";
 
 const listItems = [
     {
+        text: 'Organization',
+        url: '/settings/organisation'
+    },
+    {
         text: 'Teams',
         url: '/settings/teams'
     },

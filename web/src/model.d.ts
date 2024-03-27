@@ -34,3 +34,12 @@ export interface PagedResult<Data extends object> {
     after: string | null;
     total_count: number;
 }
+
+export interface Tenant {
+    id: string;
+    name: string;    
+    oauth_tenant_id: string
+    organization_domain: string
+    github_installation_id: number;
+    github_installation_token:string
+}

@@ -210,7 +210,7 @@ class StatsService:
             if user_id in users_by_id:
                 user = users_by_id[user_id]
                 item["user_name"] = user.name
-                item["user_team"] = user.team
+                item["user_team"] = user.team.name
                 item["user_gitAlias"] = user.gitAlias
             else:
                 item["user"] = None

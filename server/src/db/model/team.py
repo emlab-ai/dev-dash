@@ -16,3 +16,12 @@ class Team(Base):
         self.tags = tags
         self.parentId = parentId
         self.gitHubTeamId = gitHubTeamId
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'tags': self.tags,
+            'parentId': self.parentId,
+            'gitHubTeamId': self.gitHubTeamId
+        }

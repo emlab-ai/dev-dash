@@ -1,27 +1,33 @@
 import os
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, redirect, request, send_from_directory
 from flask import g
+
 from flask_cors import CORS
 from db.model.user import User
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db.model.team import Team
-from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository
+from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository, TenantRepository
 from app_auth import validate_token
+from appInsights import setup_app_insights
+from services.githubClient import setup_github_app
 from services.githubService import GithubService
 from services.statsService import StatsService
 from services.userService import UsersService
-from utils import entity_as_dict
 import logging
 from datetime import datetime
 import app_config
+import uuid
 
 logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_folder='static')
 app.debug = os.getenv('DEBUG')
 CORS(app) 
+
+setup_app_insights(app)
+setup_github_app()
 
 def authorize_api_endpoints():
     if request.path.startswith('/api/') and not validate_token():
@@ -104,7 +110,7 @@ def create_user():
     data = request.get_json()
     user_data = User(**data)
     user = userRepository.create(user_data)
-    return jsonify(entity_as_dict(user))
+    return jsonify(user.to_dict())
 
 @app.route('/api/users', methods=['PUT'])
 def update_user():
@@ -113,7 +119,7 @@ def update_user():
     data = request.get_json()
     user_data = User(**data)
     user = userRepository.update(user_data)
-    return jsonify(entity_as_dict(user))
+    return jsonify(user.to_dict())
 
 
 @app.route('/api/users', methods=['GET'])
@@ -262,9 +268,9 @@ def create_team():
     teamsRepo = TeamRepository(g.session)
     result = teamsRepo.create_team(team) 
     
-    return jsonify(entity_as_dict(result))
+    return jsonify(result.to_dict())
 
-@app.route('/wh/github', methods=['POST'])
+@app.route('/github/wh', methods=['POST'])
 def github_wh_callback():
     event = request.headers["X-GitHub-Event"]
     deliveryId = request.headers["X-GitHub-Delivery"]
@@ -294,7 +300,7 @@ def update_team():
     teamsRepo = TeamRepository(g.session)
     result = teamsRepo.update_team(team) 
     
-    return jsonify(entity_as_dict(result))
+    return jsonify(result.to_dict())
 
 @app.route('/api/teams/<id>', methods=['DELETE'])
 def delete_team(id:str):
@@ -302,6 +308,53 @@ def delete_team(id:str):
     teamsRepo.delete_team(id) 
     
     return '', 204
+
+
+@app.route('/api/tenant', methods=['GET'])
+def get_tenant():
+    return jsonify(g.tenant.to_dict())
+
+
+# https://emlab.ai/github/installation?installation_id=48941751&setup_action=install&state=123
+
+@app.route('/github/installation', methods=['GET'])
+def register_installation_id():
+    installation_id = request.args.get('installation_id')
+    setup_action = request.args.get('setup_action')
+    installation_token = request.args.get('state')
+
+    tenantRepository = TenantRepository(g.session)
+    tenant = tenantRepository.get_by_installation_token(installation_token)
+    if tenant is None:
+        logging.error("Invalid installation token")
+        return redirect('/404')
+    
+    if tenant.github_installation_id is not None:
+        logging.error("Installation token already used")
+        return redirect('/settings/github')
+    
+    tenant.github_installation_id = installation_id
+    tenant.github_installation_token = None
+
+    tenantRepository.update(tenant)
+
+    return redirect('/settings/organisation')
+
+@app.route('/api/github/installation', methods=['POST'])
+def init_register_installation_id():
+    tenantRepository = TenantRepository(g.session)
+    tenant = tenantRepository.get(g.tenant.id)
+    
+    if tenant.github_installation_id is not None:
+        logging.error("Installation token already used")
+        return "Installation already created", 409
+        
+    tenant.github_installation_token = str(uuid.uuid4())
+    tenantRepository.update(tenant)
+
+    return jsonify({
+        "state": tenant.github_installation_token
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

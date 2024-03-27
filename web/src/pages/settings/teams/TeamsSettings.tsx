@@ -43,8 +43,6 @@ function TeamsSettings() {
         onClose();
     }, []);
 
-    
-
     const onAddNew = useCallback(()=>{
         setMode("Create");
         setTeam(undefined);

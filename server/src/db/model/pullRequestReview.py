@@ -21,3 +21,15 @@ class PullRequestReview(Base):
         self.author = author
         self.authorId = authorId
         self.body = body
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'prUrl': self.prUrl,
+            'state': self.state,
+            'createdAt': self.createdAt,
+            'publishedAt': self.publishedAt,
+            'author': self.author,
+            'authorId': self.authorId,
+            'body': self.body
+        }

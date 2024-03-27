@@ -1,11 +1,14 @@
 
 
 
-from flask import abort, request
+from flask import abort, g, redirect, request
 import app_config
 from jose import jwt
 from jose.exceptions import JWTError
 import requests
+from db.repository import TenantRepository, UserRepository
+from db.model.user import User
+from db.model.tenant import Tenant
 
 def get_signing_keys(jwks_uri):
     response = requests.get(jwks_uri)
@@ -47,5 +50,34 @@ def validate_token():
 
     if not decoded_token:
         abort(401, description="Invalid or missing token.")
+
+    tid = decoded_token["tid"]
+    upn = decoded_token["upn"]
+
+    g.tid = tid
+    g.upn = upn
+
+    tenantRepository = TenantRepository(g.session)
+    userRepository = UserRepository(g.session)
+
+    tenant = tenantRepository.get_by_oauth_tenant_id(tid)
+    if not tenant:
+        tenant = Tenant(name="", oauth_tenant_id=tid)
+        tenantRepository.create(tenant)
+
+    g.tenant = tenant
+
+    user = userRepository.get_by_email(upn)
+    if not user:
+        user = User(email=upn,
+                    tenant_id=tenant.id,
+                    name=decoded_token["name"])
+        userRepository.create(user)
+
+        
+
+    g.user = user
+
+    
     
     return True

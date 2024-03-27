@@ -3,7 +3,6 @@ import datetime
 from sqlalchemy import func
 from db.model import PullRequestReview, User
 from db.model.pagedResult import PagedResult
-from utils import entity_as_dict
 
 class PullRequestReviewRepository:
     def __init__(self, session):

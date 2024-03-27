@@ -5,6 +5,7 @@ Base = mapper_registry.generate_base()
 
 from .team import Team
 from .user import User
+from .tenant import Tenant
 from .pullRequest import PullRequest
 from .pullRequestReview import PullRequestReview
 from .pullRequestComment import PullRequestComment

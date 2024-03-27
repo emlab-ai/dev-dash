@@ -1,6 +1,5 @@
 import datetime
 from db.repository import UserRepository, PullRequestRepository, PullRequestReviewRepository
-from utils import entity_as_dict
 
 def get_manager_chain(managers, managerId):
     managerId = int(managerId)
@@ -40,7 +39,7 @@ class UsersService:
         return self.userRepository.list_all_managers()
     
     def get_user_details(self, user_id:int, start_date:datetime, end_date:datetime):
-        user = entity_as_dict(self.userRepository.get(user_id))
+        user = self.userRepository.get(user_id).to_dict()
         prRepository = PullRequestRepository(self.session)
         prs_count = prRepository.get_count_by_date_user(user_id, start_date, end_date)
         reviewRepository = PullRequestReviewRepository(self.session)

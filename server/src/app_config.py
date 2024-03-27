@@ -35,3 +35,11 @@ SESSION_TYPE = "filesystem"
 EVENT_HUB_CONNECTION = os.getenv('EVENT_HUB_CONNECTION')
 
 EVENT_HUB_GITHUB = os.getenv('EVENT_HUB_GITHUB', "githubevents")
+
+GITHUB_APP_ID = os.getenv('GITHUB_APP_ID', '861923')
+
+KEY_VAULT_NAME = os.getenv('KEY_VAULT_NAME', 'emlabaivault')
+
+APP_INSIGHTS_KEY = os.getenv('APP_INSIGHTS_KEY', 'eeb8f9f4-c49c-4e78-9a36-cd9797d8f466')
+
+APP_INSIGHTS_CONNECTION_STRING = os.getenv('APP_INSIGHTS_CONNECTION_STRING', 'InstrumentationKey=eeb8f9f4-c49c-4e78-9a36-cd9797d8f466;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/')

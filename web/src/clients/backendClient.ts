@@ -6,7 +6,7 @@ export function useAxiosClient() {
   const { token } = useAuth();
 
   const client = useMemo(() => axios.create({
-    timeout: 3000,
+    timeout: 30000,
     headers: {
       'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json'

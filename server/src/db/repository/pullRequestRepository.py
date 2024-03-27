@@ -142,7 +142,6 @@ class PullRequestRepository:
                 PullRequest.repositoryName,
                 PullRequest.repositoryUrl,
                 PullRequest.reviewThreadsCount,
-                PullRequest.resolvedCommentsCount,
                 PullRequest.commentsCount,
                 PullRequest.reactionsCount,
                 PullRequest.url,

@@ -2,6 +2,9 @@ import json
 from events.producer import producer
 from azure.eventhub import EventData
 
+from db.model.pullRequest import PullRequest
+from services.githubClient import github_gql_query
+
 class GithubService:
     def record_event(self, event_type, deliveryId, installationTargetType, installationTargetId, data):
         try:
@@ -54,15 +57,77 @@ class GithubService:
 
         return True
     
-    def process_issue_comment(self, data):
+    def process_issue_comment(self, deliveryId, installationTargetType, installationTargetId, data):
+
         pass
 
-    def process_pull_request(self, data):
+    def process_pull_request(self, deliveryId, installationTargetType, installationTargetId, data):
+        payload = data["payload"]
+        action = payload["action"]
+        pull_request = payload["pull_request"]
+        installation_id = data["installation"]["id"]
+        prId = pull_request["node_id"]
+
+        # TODO: find org from installation_id
+
+        query = f"""
+            query {{
+            node(id: "{prId}") {{
+                ... on PullRequest {{
+                id
+                createdAt
+                commits(first:1) {{
+                    totalCount
+                    nodes {{
+                        commit  {{
+                            committedDate
+                            message
+                        }}
+                    }}
+                    }}
+                }}                
+                }}
+            }}
+        """
+
+        result = github_gql_query(query, installation_id)
+        if "errors" in result:
+            print(result["errors"])
+            raise Exception("Error fetching data from GitHub")
+        if not "data" in result:
+            raise Exception("No data found in GitHub response")
+
+        firstCommitDate = result["data"]["node"]["commits"]["nodes"][0]["commit"]["committedDate"]
+        firstCommitMessage = result["data"]["node"]["commits"]["nodes"][0]["commit"]["committedMessage"]
+
+        preRecord = PullRequest(
+            tenant_id = tenant_id,
+            author = pull_request["user"]["login"],
+            authorId = pull_request["user"]["id"], # TODO
+            prId = pull_request["node_id"],
+            number = pull_request["number"],
+            closedAt = pull_request["closed_at"],
+            createdAt = pull_request["created_at"],
+            changedFiles = pull_request["changed_files"],
+            deletions = pull_request["deletions"],
+            additions = pull_request["additions"],
+            bodyText = pull_request["body"],
+            title = pull_request["title"],
+            commitsCount = pull_request["commits"],
+            firstCommitMessage = firstCommitMessage,
+            firstCommitDate = firstCommitDate,
+            repositoryName = data["repository"]["name"],
+            repositoryUrl = data["repository"]["html_url"],
+            reviewThreadsCount = pull_request["review_comments"],
+            commentsCount = pull_request["comments"],
+            reactionsCount = pull_request["reactions"]["total_count"],
+            url = pull_request["html_url"]
+        )
+        
+
+    def process_pull_request_review_comment(self, deliveryId, installationTargetType, installationTargetId, data):
         pass
 
-    def process_pull_request_review_comment(self, data):
-        pass
-
-    def process_pull_request_review(self, data):
+    def process_pull_request_review(self, deliveryId, installationTargetType, installationTargetId, data):
         pass    
 

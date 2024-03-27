@@ -1,7 +1,6 @@
 import uuid
 from db.model.team import Team
 from db.model.pagedResult import PagedResult, process_paged_result
-from utils import entity_as_dict
 from sqlalchemy.orm import aliased
 
 # Create the team repository class

@@ -7,19 +7,17 @@ class UserRepository:
         self.session = session
 
     def create(self, user):
-        try:
-            self.session.add(user)
-            self.session.commit()
-            return user
-        except Exception as error:
-            print("Error while creating user:", error)
+        self.session.add(user)
+        self.session.commit()
+        return user
 
     def get(self, user_id):
-        try:
-            user = self.session.query(User).filter_by(id=user_id).first()
-            return user
-        except Exception as error:
-            print("Error while getting user:", error)
+        user = self.session.query(User).filter(User.id == user_id).first()
+        return user
+
+    def get_by_email(self, email):
+        user = self.session.query(User).filter(User.email == email).first()
+        return user
 
     def list_all(self, limit=None, after=None, before=None):
         if before is not None and after is not None:
@@ -68,38 +66,25 @@ class UserRepository:
         return PagedResult(result, total_count, before_cursor, after_cursor)
 
     def list_all_reports(self, managerIds):
-        try:
-            query = self.session.query(User)
-            query = query.filter(User.managerId.in_(managerIds))
-            reporters = query.all()
-            return reporters
-        except Exception as error:
-            print("Error while listing reporters:", error)
+        query = self.session.query(User)
+        query = query.filter(User.managerId.in_(managerIds))
+        reporters = query.all()
+        return reporters
 
     def list_all_managers(self):
-        try:
-            query = self.session.query(User)
-            query = query.filter(User.isManager == True)
+        query = self.session.query(User)
+        query = query.filter(User.isManager == True)
 
-            users = query.all()
+        users = query.all()
 
-            return users
-             
-        except Exception as error:
-            print("Error while listing managers:", error)
+        return users
 
     def update(self, user):
-        try:
-            self.session.merge(user)
-            self.session.commit()
-            return user
-        except Exception as error:
-            print("Error while updating user:", error)
+        self.session.merge(user)
+        self.session.commit()
+        return user
 
     def delete(self, user_id):
-        try:
-            user = self.session.query(User).filter_by(id=user_id).first()
-            self.session.delete(user)
-            self.session.commit()
-        except Exception as error:
-            print("Error while deleting user:", error)
+        user = self.session.query(User).filter_by(id=user_id).first()
+        self.session.delete(user)
+        self.session.commit()

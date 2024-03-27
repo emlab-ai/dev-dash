@@ -1,0 +1,102 @@
+import datetime
+import jwt
+import time
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+import app_config
+import requests
+from cachetools import cached, TTLCache
+from utils import log_exceptions
+from services.keyVaultClient import get_secret
+import base64
+
+# global variables
+private_key: str = None
+token_generated_time:datetime = None
+token: str = None
+access_token_cache = TTLCache(maxsize=10000, ttl=3000)
+
+@log_exceptions()
+def setup_github_app():
+    global app_id
+    global private_key
+
+    certStr = get_secret("githubappcertificate")
+    def decode_base64_string(base64_string: str) -> str:
+        decoded_bytes = base64.b64decode(base64_string)
+        decoded_string = decoded_bytes.decode('utf-8')
+        return decoded_string
+
+    decoded_cert = decode_base64_string(certStr)
+    # Your GitHub App's identifier
+    app_id = app_config.GITHUB_APP_ID
+
+    private_key = serialization.load_pem_private_key(
+        decoded_cert.encode(),
+        password=None,
+        backend=default_backend()
+    )
+
+def get_app_access_token() -> str:
+    global token_generated_time
+    global token
+
+    if not private_key:
+        setup_github_app()
+
+    if token and  token_generated_time and (time.time() - token_generated_time) < 540:  
+        return token      
+
+    time_now = int(time.time())
+    payload = {
+        'iat': time_now,
+        'exp': time_now + (10 * 60),
+        'iss': app_id
+    }
+
+    token = jwt.encode(
+        payload,
+        private_key,
+        algorithm='RS256'
+    )
+    token_generated_time = time_now
+    return token
+
+
+
+@cached(access_token_cache)
+def get_installation_access_token(installation_id:str) -> str: 
+    token = get_app_access_token()
+
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/vnd.github+json'
+    }
+
+    response = requests.post(
+        f'https://api.github.com/app/installations/{installation_id}/access_tokens',
+        headers=headers
+    )
+
+    access_token = response.json()['token']
+
+    return access_token
+
+@log_exceptions(log_args=True)
+def github_gql_query(query:str, installation_id:str) -> dict:
+    access_token = get_installation_access_token(installation_id)
+
+    headers = {
+        'Authorization': f'token {access_token}',
+        'Accept': 'application/vnd.github+json'
+    }
+
+    response = requests.post(
+        'https://api.github.com/graphql',
+        json={'query': query},
+        headers=headers
+    )
+
+    response.json()
+
+    

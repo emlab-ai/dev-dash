@@ -11,3 +11,10 @@ requests===2.31.0
 azure-eventhub===5.11.6
 azure-functions
 azure-eventhub
+PyGithub
+cachetools
+azure-keyvault-secrets 
+azure-identity
+opencensus-ext-azure
+opencensus-ext-requests
+opencensus-ext-logging

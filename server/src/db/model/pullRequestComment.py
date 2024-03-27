@@ -27,3 +27,18 @@ class PullRequestComment(Base):
         self.createdAt = createdAt
         self.repositoryName = repositoryName
         self.body = body
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'threadId': self.threadId,
+            'prUrl': self.prUrl,
+            'isResolved': self.isResolved,
+            'isOutdated': self.isOutdated,
+            'author': self.author,
+            'authorId': self.authorId,
+            'reactionsCount': self.reactionsCount,
+            'createdAt': self.createdAt,
+            'repositoryName': self.repositoryName,
+            'body': self.body
+        }
