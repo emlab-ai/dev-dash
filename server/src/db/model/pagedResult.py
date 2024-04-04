@@ -8,6 +8,14 @@ class PagedResult(Generic[T]):
         self.before = before
         self.after = after
         self.total_count = total_count
+    
+    def to_dict(self):
+        return {
+            'data': self.data,
+            'before': self.before,
+            'after': self.after,
+            'totalCount': self.total_count
+        }
 
 def process_paged_result(result, limit, before, after):
     hasMore = False

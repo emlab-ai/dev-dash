@@ -4,8 +4,8 @@ import React, { createContext, useCallback, useEffect, useState } from 'react';
 
 interface OrgSettingsModel {
     tenant: Tenant | undefined;
-    isGithugConnected: boolean;
     startGithubConnect: () => Promise<void>;
+    startGithubSync: (installationId: number) => Promise<void>;
 }
 
 export const useOrgSettingsModel = (): OrgSettingsModel => {
@@ -43,14 +43,28 @@ export const useOrgSettingsModel = (): OrgSettingsModel => {
         }
     }, [axiosFetch]);
 
+    const startGithubSync = useCallback(async (installationId: number) => {
+        try {
+            const response = await axiosFetch(`/api/github/installation/import`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                data : JSON.stringify({installation_id: installationId})
+            });
+            const result = await response.data;
+
+        } catch (error) {
+            console.error('Error fetching reviews', error);
+        }
+    }   , [axiosFetch]);
+
     useEffect(() => {
         fetchTenantAsync();
     }, [fetchTenantAsync]);
 
     return {
         tenant,
-        isGithugConnected: !!tenant?.github_installation_id,
-        startGithubConnect
+        startGithubConnect,
+        startGithubSync
     };
 };
 

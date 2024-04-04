@@ -31,10 +31,11 @@ SESSION_TYPE = "filesystem"
 # Using the file system will not work in most production systems,
 # it's better to use a database-backed session store instead.
 
-
+SQL_DATABASE_URI = os.getenv('SQL_DATABASE_URI', 'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard') 
 EVENT_HUB_CONNECTION = os.getenv('EVENT_HUB_CONNECTION')
 
 EVENT_HUB_GITHUB = os.getenv('EVENT_HUB_GITHUB', "githubevents")
+EVENT_HUB_GITHUB_IMPORT = os.getenv('EVENT_HUB_GITHUB_IMPORT', "githubimport")
 
 GITHUB_APP_ID = os.getenv('GITHUB_APP_ID', '861923')
 

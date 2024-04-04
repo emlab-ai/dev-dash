@@ -15,6 +15,8 @@ dist-ssr
 .venv
 .venv/*
 
+*.egg-info
+*.egg-info/*
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -38,3 +40,4 @@ __azurite_db_queue__.json
 __azurite_db_queue_extent__.json
  *.zip
 
+__azurite_db_table__.json

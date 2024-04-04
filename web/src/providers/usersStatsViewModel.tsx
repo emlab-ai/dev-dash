@@ -44,11 +44,12 @@ export const useUsersStatsModel = (): UsersStatsModel => {
 
     const fetchUserStatsAsync = useCallback(async () => {
         try {
-            if(!managerFilter) {
-                return;
+            let managerFilterStr = '';
+            if(managerFilter) {
+                managerFilterStr = `&manager_id=${managerFilter}`;
             }
 
-            const response = await backendClient(`/api/users/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const response = await backendClient(`/api/users/stats?start_date=${startDate}&end_date=${endDate}${managerFilterStr}`);
             const result = await response.data;
 
             setUsersStats(result);

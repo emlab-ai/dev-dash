@@ -69,7 +69,8 @@ def validate_token():
 
     user = userRepository.get_by_email(upn)
     if not user:
-        user = User(email=upn,
+        user = User(
+                    email=upn,
                     tenant_id=tenant.id,
                     name=decoded_token["name"])
         userRepository.create(user)
@@ -77,7 +78,5 @@ def validate_token():
         
 
     g.user = user
-
-    
     
     return True

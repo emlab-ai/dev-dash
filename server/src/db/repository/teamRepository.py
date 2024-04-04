@@ -1,4 +1,3 @@
-import uuid
 from db.model.team import Team
 from db.model.pagedResult import PagedResult, process_paged_result
 from sqlalchemy.orm import aliased
@@ -9,9 +8,6 @@ class TeamRepository:
         self.session = session
 
     def create_team(self, team):
-        if team.id is None:
-            team.id = uuid.uuid4()
-
         if team.parentId == "":
             team.parentId = None
 
@@ -42,7 +38,7 @@ class TeamRepository:
             query = self.session.query(Team, ParentTeam)
             total_count = query.count()
 
-            query = query.outerjoin(ParentTeam, Team.parentId == ParentTeam.id)
+            query = query.outerjoin(ParentTeam, Team.parent_id == ParentTeam.id)
             if after:
                 query = query.filter(Team.id > after)
                 query = query.order_by(Team.id.asc())
@@ -58,8 +54,8 @@ class TeamRepository:
             query = query.with_entities(
                 Team.id,
                 Team.name,
-                Team.parentId,
-                Team.gitHubTeamId,
+                Team.parent_id,
+                Team.github_team_id,
                 Team.tags,
                 ParentTeam.name.label('parentName')
             )

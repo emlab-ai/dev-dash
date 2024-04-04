@@ -9,7 +9,7 @@ interface TeamsSettingsModel {
     hasNext: boolean;
     hasPrev: boolean;
     createTeamAsync: (team: Team) => Promise<void>;
-    deleteTeamAsync: (teamId: string) => Promise<void>;
+    deleteTeamAsync: (teamId: number) => Promise<void>;
     updateTeamAsync: (team: Team) => Promise<void>;
 }
 
@@ -17,7 +17,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
     const [teams, setTeams] = useState<Team[]>([]);
     const [teamsBefore, setTeamsBefore] = useState<string|null>(null);
     const [teamsAfter, setTeamsAfter] = useState<string|null>(null);
-    const backendClient = useAxiosClient();
+    const axiosFetch = useAxiosClient();
 
     const fetchTeamsAsync = useCallback(async (before?: string, after?: string) => {
         try {
@@ -27,7 +27,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
-            const response = await backendClient(`/api/teams?page_size=20${pageStr}`);
+            const response = await axiosFetch(`/api/teams?page_size=20${pageStr}`);
             const result = await response.data;
 
             setTeams(result.data);
@@ -36,7 +36,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
         } catch (error) {
             console.error('Error fetching reviews', error);
         }
-    }, [backendClient]);
+    }, [axiosFetch]);
 
 
     const createTeamAsync = useCallback(async (team: Team) => {
@@ -44,13 +44,13 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             method: 'POST',
             headers: 
                 {'Content-Type': 'application/json'},
-            body: JSON.stringify(team)
+            data: JSON.stringify(team)
         };
 
-        const response = await backendClient('/api/teams', requestInfo);
+        const response = await axiosFetch('/api/teams', requestInfo);
         const result = await response.data;
         setTeams((teams)=>[...teams, result]);
-    }, [backendClient, setTeams])
+    }, [axiosFetch, setTeams])
 
 
     const updateTeamAsync = useCallback(async (team: Team) => {
@@ -61,7 +61,7 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             body: JSON.stringify(team)
         };
 
-        const response = await backendClient('/api/teams', requestInfo);
+        const response = await axiosFetch('/api/teams', requestInfo);
         const result = await response.data;
         
         setTeams((teams)=>{
@@ -70,21 +70,21 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
             res[index] =  result;
             return res;
         });
-    }, [teams, backendClient])
+    }, [teams, axiosFetch])
 
 
-    const deleteTeamAsync = useCallback(async (teamId: string) => {
+    const deleteTeamAsync = useCallback(async (teamId: number) => {
         var requestInfo = {
             method: 'DELETE'
         };
 
-        const response = await backendClient(`/api/teams/${teamId}`, requestInfo);
+        const response = await axiosFetch(`/api/teams/${teamId}`, requestInfo);
         if (response.status !== 204) {
             console.error('Error deleting team');
             return;
         }
         setTeams((teams)=>teams.filter(t=>t.id !== teamId));
-    }, [backendClient]);
+    }, [axiosFetch]);
 
     useEffect(() => {
         fetchTeamsAsync();

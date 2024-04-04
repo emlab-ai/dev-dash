@@ -1,78 +1,83 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from . import Base
 
 class PullRequest(Base):
     __tablename__ = 'pull_requests'
 
-    id = Column(Integer, primary_key=True)
-    tenant_id = Column(Integer)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
+    tenant = relationship('Tenant', lazy=True)
 
-    author = Column(String)
-    authorId = Column(Integer)
-    prId = Column(String)
+    author = Column(String(256))
+    author_id = Column(BigInteger)
+    node_id = Column(String(128))
+    org_id = Column(BigInteger)
+    repository_id = Column(BigInteger, ForeignKey('github_repos.id'))
     number = Column(Integer)
-    closedAt = Column(DateTime)
-    createdAt = Column(DateTime)
-    changedFiles = Column(Integer, nullable=True)
+    closed_at = Column(DateTime)
+    created_at = Column(DateTime)
+    changed_files = Column(Integer, default=0)
     deletions = Column(Integer)
     additions = Column(Integer)
-    bodyText = Column(String)
-    title = Column(String)
-    commitsCount = Column(Integer)
-    firstCommitMessage = Column(String)
-    firstCommitDate = Column(DateTime)
-    repositoryName = Column(String)
-    repositoryUrl = Column(String)
-    reviewThreadsCount = Column(Integer)
-    commentsCount = Column(Integer)
-    reactionsCount = Column(Integer)
-    url = Column(String)
+    body = Column(String)
+    title = Column(String(2000))
+    commits_count = Column(Integer)
+    first_commit_message = Column(String)
+    first_commit_date = Column(DateTime)
+    review_threads_count = Column(Integer)
+    comments_count = Column(Integer)
+    url = Column(String(2000))
+    state = Column(String(64), nullable=True)
+
+    repository = relationship('GithubRepo')
     
-    def __init__(self, tenant_id, author, authorId, prId, number, closedAt, createdAt, changedFiles, deletions, additions, bodyText, title, commitsCount, firstCommitMessage, firstCommitDate, repositoryName, repositoryUrl, reviewThreadsCount, commentsCount, reactionsCount, url):
+    def __init__(self, id, tenant_id, author, author_id, node_id, org_id, repository_id, number, closed_at, created_at, changed_files, deletions, additions, body, title, commits_count, first_commit_message, first_commit_date, review_threads_count, comments_count, url, state):
+        self.id = id
         self.tenant_id = tenant_id
         self.author = author
-        self.authorId = authorId
-        self.prId = prId
+        self.author_id = author_id
+        self.node_id = node_id
+        self.org_id = org_id
+        self.repository_id = repository_id
         self.number = number
-        self.closedAt = closedAt
-        self.createdAt = createdAt
-        self.changedFiles = changedFiles
+        self.closed_at = closed_at
+        self.created_at = created_at
+        self.changed_files = changed_files
         self.deletions = deletions
         self.additions = additions
-        self.bodyText = bodyText
+        self.body = body
         self.title = title
-        self.commitsCount = commitsCount
-        self.firstCommitMessage = firstCommitMessage
-        self.firstCommitDate = firstCommitDate
-        self.repositoryName = repositoryName
-        self.repositoryUrl = repositoryUrl
-        self.reviewThreadsCount = reviewThreadsCount
-        self.commentsCount = commentsCount
-        self.reactionsCount = reactionsCount
+        self.commits_count = commits_count
+        self.first_commit_message = first_commit_message
+        self.first_commit_date = first_commit_date
+        self.review_threads_count = review_threads_count
+        self.comments_count = comments_count
         self.url = url
-
+        self.state = state
+        
     def to_dict(self):
         return {
             'id': self.id,
-            'tenant_id': self.tenant_id,
+            'tenantId': self.tenant_id,
             'author': self.author,
-            'authorId': self.authorId,
-            'prId': self.prId,
+            'authorId': self.author_id,
+            'nodeId': self.node_id,
+            'orgId': self.org_id,
+            'repositoryId': self.repository_id,
             'number': self.number,
-            'closedAt': self.closedAt,
-            'createdAt': self.createdAt,
-            'changedFiles': self.changedFiles,
+            'closedAt': self.closed_at,
+            'createdAt': self.created_at,
+            'changedFiles': self.changed_files,
             'deletions': self.deletions,
             'additions': self.additions,
-            'bodyText': self.bodyText,
+            'body': self.body,
             'title': self.title,
-            'commitsCount': self.commitsCount,
-            'firstCommitMessage': self.firstCommitMessage,
-            'firstCommitDate': self.firstCommitDate,
-            'repositoryName': self.repositoryName,
-            'repositoryUrl': self.repositoryUrl,
-            'reviewThreadsCount': self.reviewThreadsCount,
-            'commentsCount': self.commentsCount,
-            'reactionsCount': self.reactionsCount,
-            'url': self.url
+            'commitsCount': self.commits_count,
+            'firstCommitMessage': self.first_commit_message,
+            'firstCommitDate': self.first_commit_date,
+            'reviewThreadsCount': self.review_threads_count,
+            'commentsCount': self.comments_count,
+            'url': self.url,
+            'state': self.state
         }

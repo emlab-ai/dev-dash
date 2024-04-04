@@ -31,6 +31,9 @@ class UsersService:
 
         return self.userRepository.list_all_reports(managerIds)
     
+    def get_all_users_count(self):
+        return self.userRepository.count()
+    
     def get_manager_chain(self, managerId):
         managers = self.userRepository.list_all_managers()
         return get_manager_chain(managers, managerId)

@@ -1,4 +1,5 @@
 import datetime
+from types import SimpleNamespace
 import jwt
 import time
 from cryptography.hazmat.backends import default_backend
@@ -97,6 +98,122 @@ def github_gql_query(query:str, installation_id:str) -> dict:
         headers=headers
     )
 
-    response.json()
+    if response.status_code != 200:
+        raise Exception(f'Error fetching data from GitHub: {response.text}')
+    
+    result = response.json(object_hook=lambda d: SimpleNamespace(**d) if isinstance(d, dict) else d)
+
+    if hasattr(result, "errors"):
+        print(result.errors)
+        raise Exception(f"Error fetching data from GitHub, {result.errors}")
+    if not hasattr(result, "data"):
+        raise Exception("No data found in GitHub response")
+    
+    return result
 
     
+def get_repo_pull_requests(installation_id, repo_full_name, cursor=None):
+    afterFilter = f', after: {cursor}' if cursor else ''
+    [owner, name] = repo_full_name.split('/')
+    query = f"""
+    {{
+      repository(owner: "{owner}", name: "{name}") {{
+        databaseId
+        pullRequests(first: 100{afterFilter}) {{
+          totalCount
+          pageInfo {{
+            hasNextPage
+            endCursor
+          }}
+          nodes {{
+            createdAt
+            id
+            number
+            closedAt
+            changedFiles
+            deletions
+            additions
+            bodyText
+            title
+            url
+            databaseId  
+            state
+            author {{
+                login
+              	... on User {{
+                    id
+                    databaseId
+                }}
+            }}
+            commits(first:1) {{
+                totalCount
+                nodes {{
+                    commit  {{
+                        committedDate
+                        message
+                    }}
+                }}
+            }}
+            
+            repository {{
+                name
+                url
+            }}
+            reviewThreads(first: 15) {{
+                totalCount
+                nodes {{
+                    isResolved
+                    id
+                    isOutdated
+                    comments(first: 20) {{
+                        nodes {{
+                            createdAt
+                            author {{
+                                login
+                            }}
+                            body
+                            reactions {{
+                                totalCount
+                            }}
+                        }}
+                        pageInfo {{
+                            hasNextPage
+                            endCursor
+                        }}
+                    }}
+                }}
+            }}
+            reviews(first: 10) {{
+                nodes {{
+                state
+                createdAt
+                publishedAt
+                author {{
+                    login
+                }}
+                bodyText
+                }}
+            }}
+            comments (first: 20) {{
+                totalCount
+                edges {{
+                    node {{
+                        createdAt
+                        author {{
+                            login
+                        }}
+                        reactions {{
+                            totalCount
+                        }}
+                        bodyText              
+                        id
+                    }}
+                }}
+            }}
+          
+          }}
+        }}
+      }}
+    }}
+    """
+    return github_gql_query(query, installation_id)

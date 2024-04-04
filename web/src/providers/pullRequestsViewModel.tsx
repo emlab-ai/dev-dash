@@ -12,7 +12,7 @@ export type PullRequest = {
     id:number;
     author:string;
     authorId:number;
-    prId:string;
+    node_id:string;
     number:number;
     closedAt:Date;
     createdAt: Date;
@@ -72,13 +72,9 @@ export const usePullRequestsModel = (): PullRequestsModel => {
 
     const fetchPullRequestsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<PullRequest>> => {
         try {
-            if(!managerFilter) {
-                return {
-                    data: [],
-                    before: null,
-                    after: null,
-                    total_count: 0
-                };
+            let managerFilterStr = '';
+            if(managerFilter) {
+                managerFilterStr = `&manager_id=${managerFilter}`;
             }
 
             let args = '';
@@ -93,14 +89,14 @@ export const usePullRequestsModel = (): PullRequestsModel => {
                 sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
             }
 
-            const response = await backendClient(`/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}${sortingArgs}`);
+            const response = await backendClient(`/api/git/prs?page_size=${limit??30}${args}&start_date=${startDate}&end_date=${endDate}${managerFilterStr}${sortingArgs}`);
             const result = await response.data;
             if (!result.data?.length) {
                 return {
                     data: [],
                     before: null,
                     after: null,
-                    total_count: 0
+                    totalCount: 0
                 };
             }
 
@@ -113,17 +109,18 @@ export const usePullRequestsModel = (): PullRequestsModel => {
             data: [],
             before: null,
             after: null,
-            total_count: 0
+            totalCount: 0
         };
     }, [startDate, endDate, managerFilter]);
 
     const fetchPullRequestsStatsAsync = useCallback(async () => {
         try {
-            if(!managerFilter) {
-                return;
+            let managerFilterStr = '';
+            if(managerFilter) {
+                managerFilterStr = `&manager_id=${managerFilter}`;
             }
 
-            const response = await backendClient(`/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const response = await backendClient(`/api/git/prs_stats?start_date=${startDate}&end_date=${endDate}${managerFilterStr}`);
             const result = await response.data;
           
             setPullRequestStats(result);

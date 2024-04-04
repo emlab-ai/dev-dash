@@ -1,30 +1,32 @@
+import exp from "constants";
+
 export interface Team {
-    id?:string;
+    id?:number;
     name: string;
     parentName?: string;
-    parentId?: string;
-    gitHubTeamId?: string;
+    parentId?: number;
+    gitHubTeamId?: number;
     members?: TeamMember[];
     tags?: string[];
 }
 
 export interface TeamMember {
-    userId: string;
-    teamId: string;
+    userId: number;
+    teamId: number;
 }
 
 export interface User {
-    id?:string;
+    id?:number;
     name: string;
-    gitHubUserId?: string;
+    githubUserId?: number;
     tags?: string;
     gitAlias?: string;
-    managerId?: string;
+    managerId?: number;
     managerName?: string;
     isManager?: boolean;
     level?: string;
     email?: string;
-    teamId?: string;
+    teamId?: number;
     teamName?: string;
 }
 
@@ -32,14 +34,19 @@ export interface PagedResult<Data extends object> {
     data: Data[];
     before: string | null;
     after: string | null;
-    total_count: number;
+    totalCount: number;
+}
+
+export interface GithubOrg {
+    id: number;
+    name: string;
+    installationId: number;
 }
 
 export interface Tenant {
-    id: string;
+    id: number;
     name: string;    
-    oauth_tenant_id: string
-    organization_domain: string
-    github_installation_id: number;
-    github_installation_token:string
+    oauthTenantId: string
+    organizationDomain: string
+    githubOrgs: GithubOrg[];
 }

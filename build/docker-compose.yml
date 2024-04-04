@@ -5,7 +5,7 @@ services:
       context: ../
       dockerfile: ./build/Dockerfile    
     environment:
-      - SQL_DATABASE_URI=postgresql://postgres:bonaventura@host.docker.internal:5432/developer_dashboard
+      - SQL_DATABASE_URI=postgresql://postgres:bonaventura@host.docker.internal:5432/emlab_ai
       - DEBUG=True
     ports:
       - 8080:8080

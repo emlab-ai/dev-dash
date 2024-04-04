@@ -16,14 +16,6 @@ class TenantRepository:
         tenant = self.session.query(Tenant).filter(Tenant.id==tenant_id).first()
         return tenant
 
-    def get_by_installation_id(self, installation_id) -> Tenant:
-        tenant = self.session.query(Tenant).filter(Tenant.github_installation_id==installation_id).first()
-        return tenant
-    
-    def get_by_installation_token(self, github_installation_token) -> Tenant:
-        tenant = self.session.query(Tenant).filter(Tenant.github_installation_token==github_installation_token).first()
-        return tenant
-
     def get_by_oauth_tenant_id(self, oauth_tenant_id) -> Tenant:
         tenant = self.session.query(Tenant).filter(Tenant.oauth_tenant_id==oauth_tenant_id).first()
         return tenant

@@ -26,8 +26,8 @@ class UserRepository:
         query = self.session.query(User)
         total_count = query.count()
         Manager = aliased(User)
-        query = query.outerjoin(Manager, User.managerId == Manager.id)
-        query = query.outerjoin(Team, User.teamId == Team.id)
+        query = query.outerjoin(Manager, User.manager_id == Manager.id)
+        query = query.outerjoin(Team, User.team_id == Team.id)
 
         if after:
             query = query.filter(User.id >= after)
@@ -46,16 +46,17 @@ class UserRepository:
         query = query.with_entities(
             User.id,
             User.name,
-            User.managerId,
+            User.manager_id,
             User.email,
-            User.isManager,
-            User.teamId,
-            User.gitAlias,
+            User.is_manager,
+            User.team_id,
+            User.github_user,
+            User.github_user_id,
             User.tags,
             User.level,
             User.tags,
-            Manager.name.label('managerName'),
-            Team.name.label('teamName')
+            Manager.name.label('manager_name'),
+            Team.name.label('team_name')
         )
         
         result = query.all()
@@ -67,13 +68,17 @@ class UserRepository:
 
     def list_all_reports(self, managerIds):
         query = self.session.query(User)
-        query = query.filter(User.managerId.in_(managerIds))
+        query = query.filter(User.manager_id.in_(managerIds))
         reporters = query.all()
         return reporters
+    
+    def count(self):
+        query = self.session.query(User)
+        return query.count()
 
     def list_all_managers(self):
         query = self.session.query(User)
-        query = query.filter(User.isManager == True)
+        query = query.filter(User.is_manager == True)
 
         users = query.all()
 

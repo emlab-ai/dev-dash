@@ -1,7 +1,7 @@
 import datetime
 
 from sqlalchemy import func
-from db.model import PullRequestReview, User
+from db.model import GithubPullRequestReview, User
 from db.model.pagedResult import PagedResult
 
 class PullRequestReviewRepository:
@@ -18,7 +18,7 @@ class PullRequestReviewRepository:
 
     def get(self, review_id):
         try:
-            review = self.session.query(PullRequestReview).filter_by(id=review_id).first()
+            review = self.session.query(GithubPullRequestReview).filter_by(id=review_id).first()
             return review
         except Exception as error:
             print("Error while getting review:", error)
@@ -28,33 +28,33 @@ class PullRequestReviewRepository:
             if before is not None and after is not None:
                 raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
             
-            query = self.session.query(PullRequestReview)
-            query = query.filter(PullRequestReview.authorId == user_id)
-            query = query.filter(PullRequestReview.createdAt >= start_date.date(), PullRequestReview.createdAt <= end_date)
-            query = query.join(User, User.id == PullRequestReview.authorId)
+            query = self.session.query(GithubPullRequestReview)
+            query = query.filter(GithubPullRequestReview.authorId == user_id)
+            query = query.filter(GithubPullRequestReview.createdAt >= start_date.date(), GithubPullRequestReview.createdAt <= end_date)
+            query = query.join(User, User.id == GithubPullRequestReview.authorId)
             
             total = query.count()
             if after:
-                query = query.filter(PullRequestReview.id > after)
-                query = query.order_by(PullRequestReview.id)
+                query = query.filter(GithubPullRequestReview.id > after)
+                query = query.order_by(GithubPullRequestReview.id)
             elif before:
-                query = query.filter(PullRequestReview.id < before)
-                query = query.order_by(PullRequestReview.id.desc())
+                query = query.filter(GithubPullRequestReview.id < before)
+                query = query.order_by(GithubPullRequestReview.id.desc())
             else :
-                query  = query.order_by(PullRequestReview.id)
+                query  = query.order_by(GithubPullRequestReview.id)
 
             if limit:
                 query = query.limit(limit + 1)
             
             query = query.with_entities(
-                PullRequestReview.id,
-                PullRequestReview.authorId,
-                PullRequestReview.author,
+                GithubPullRequestReview.id,
+                GithubPullRequestReview.authorId,
+                GithubPullRequestReview.author,
                 User.name.label('author_name'),
-                PullRequestReview.prUrl,
-                PullRequestReview.state,
-                PullRequestReview.createdAt,
-                PullRequestReview.body
+                GithubPullRequestReview.prUrl,
+                GithubPullRequestReview.state,
+                GithubPullRequestReview.createdAt,
+                GithubPullRequestReview.body
             )            
                 
             reviews = query.all()
@@ -85,11 +85,11 @@ class PullRequestReviewRepository:
 
     def get_count_by_date_user(self, user_id:int, start_date:datetime, end_date:datetime):
         try:
-            query = self.session.query(PullRequestReview)
-            query = query.filter(PullRequestReview.createdAt >= start_date, PullRequestReview.createdAt <= end_date, PullRequestReview.authorId == user_id)
-            query = query.with_entities(func.date_trunc('day', PullRequestReview.createdAt).label('created_day'), 
-                                        func.count(PullRequestReview.id).label('count')) 
-            query = query.group_by(func.date_trunc('day', PullRequestReview.createdAt))
+            query = self.session.query(GithubPullRequestReview)
+            query = query.filter(GithubPullRequestReview.createdAt >= start_date, GithubPullRequestReview.createdAt <= end_date, GithubPullRequestReview.authorId == user_id)
+            query = query.with_entities(func.date_trunc('day', GithubPullRequestReview.createdAt).label('created_day'), 
+                                        func.count(GithubPullRequestReview.id).label('count')) 
+            query = query.group_by(func.date_trunc('day', GithubPullRequestReview.createdAt))
 
             prs = query.all()
             

@@ -66,11 +66,12 @@ export const useDashboardModel = (): DashboardModel => {
 
     const fetchStatsAsync = useCallback(async () => {
         try {
-            if (!managerFilter) {
-                return;
+            let managerFilterStr= '';
+            if (managerFilter) {
+                managerFilterStr = `&manager_id=${managerFilter}`;
             }
 
-            const response = await backendClient(`/api/stats?start_date=${startDate}&end_date=${endDate}&manager_id=${managerFilter}`);
+            const response = await backendClient(`/api/stats?start_date=${startDate}&end_date=${endDate}${managerFilterStr}`);
             const data = await response.data;
             setStats({
                 loaded: true,

@@ -1,17 +1,21 @@
 import os
+from db.model.githubOrg import GithubOrg
 from flask import Flask, abort, jsonify, redirect, request, send_from_directory
 from flask import g
 
 from flask_cors import CORS
 from db.model.user import User
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository, TenantRepository
 from app_auth import validate_token
-from appInsights import setup_app_insights
+from app_insights import setup_app_insights
+from db.model import GithubInstallation
+from db.repository.repository import Repository
+from app_sql import setup_sql_engine
 from services.githubClient import setup_github_app
-from services.githubService import GithubService
+from services.githubImportService import GithubImportService
+from services.githubWebhookService import GithubWebhookService
 from services.statsService import StatsService
 from services.userService import UsersService
 import logging
@@ -23,10 +27,11 @@ logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_folder='static')
-app.debug = os.getenv('DEBUG')
+app.debug = app_config.DEBUG
 CORS(app) 
 
-setup_app_insights(app)
+Session = setup_sql_engine(app)
+setup_app_insights()
 setup_github_app()
 
 def authorize_api_endpoints():
@@ -53,17 +58,6 @@ def serve_public(path):
 def serve_react_app():
     return send_from_directory('static/dist', 'index.html')
 
-connection_string = os.getenv('SQL_DATABASE_URI') #'postgresql://postgres:bonaventura@localhost:5432/developer_dashboard'
-# connection_string = 'postgresql://postgres:bonaventura@host.docker.internal:5432/developer_dashboard'
-
-
-app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
-engine = create_engine(connection_string, echo=True)
-
-Session = sessionmaker(bind=engine)
-User.metadata.create_all(engine)
-Team.metadata.create_all(engine)
-
 def _get_request_date_args(request) -> tuple[int, datetime, datetime]:
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
@@ -81,6 +75,7 @@ def _get_request_scope_args(request) -> tuple[int, datetime, datetime]:
 @app.before_request
 def before_request():
     g.session = Session()
+    g.trace_id = request.headers.get('x-ms-request-id') or str(uuid.uuid4().hex)
     authorize_api_endpoints()
 
 @app.after_request
@@ -189,7 +184,10 @@ def get_git_prs_stats():
 
     prRepository = PullRequestRepository(g.session)
     userService = UsersService(g.session)
-    managerIds = userService.get_manager_chain(managerId)
+    if managerId is not None:
+        managerIds = userService.get_manager_chain(managerId)
+    else:
+        managerIds = None
 
     result = prRepository.get_avg_stats(start_date=start_date, end_date=end_date, managerIds=managerIds)
 
@@ -285,9 +283,10 @@ def github_wh_callback():
 
     data = request.get_json()
     
-    githubService = GithubService()
+    githubService = GithubWebhookService(g.session)
     # TODO: vlidate signature
-    githubService.record_event(event, deliveryId, installationTargetType, installationTargetId, data)
+    githubService.record_event(event, deliveryId, data)
+    githubService.process_event(event, deliveryId, data)
     
     return "", 200
 
@@ -323,38 +322,55 @@ def register_installation_id():
     setup_action = request.args.get('setup_action')
     installation_token = request.args.get('state')
 
-    tenantRepository = TenantRepository(g.session)
-    tenant = tenantRepository.get_by_installation_token(installation_token)
-    if tenant is None:
-        logging.error("Invalid installation token")
-        return redirect('/404')
-    
-    if tenant.github_installation_id is not None:
-        logging.error("Installation token already used")
-        return redirect('/settings/github')
-    
-    tenant.github_installation_id = installation_id
-    tenant.github_installation_token = None
+    installationRepository = Repository(GithubInstallation, g.session)
+    if setup_action == 'install':
+        
+        inst = installationRepository.find_one(GithubInstallation.installation_token == installation_token)
+        if inst is None:
+            logging.error("Invalid installation token")
+            return redirect('/404')
+        
+        if inst.installation_id is not None:
+            logging.error("Installation token already used")
+            return redirect('/settings/github')
+        
+        inst.installation_id = installation_id
+        inst.installation_token = None
 
-    tenantRepository.update(tenant)
+        installationRepository.update(inst)
 
     return redirect('/settings/organisation')
 
 @app.route('/api/github/installation', methods=['POST'])
 def init_register_installation_id():
-    tenantRepository = TenantRepository(g.session)
-    tenant = tenantRepository.get(g.tenant.id)
-    
-    if tenant.github_installation_id is not None:
-        logging.error("Installation token already used")
-        return "Installation already created", 409
-        
-    tenant.github_installation_token = str(uuid.uuid4())
-    tenantRepository.update(tenant)
+    installationRepository = Repository(GithubInstallation, g.session)
+    inst = installationRepository.create(GithubInstallation(tenant_id=g.tenant.id, installation_token=str(uuid.uuid4())))
 
     return jsonify({
-        "state": tenant.github_installation_token
+        "state": inst.installation_token
     })
+
+@app.route('/api/github/installation', methods=['DELETE'])
+def delete_installation_id():
+    installationRepository = Repository(GithubInstallation, g.session)
+    inst = installationRepository.create(GithubInstallation(tenant_id=g.tenant.id, installation_token=str(uuid.uuid4())))
+
+    return jsonify({
+        "state": inst.installation_token
+    })
+
+@app.route('/api/github/installation/import', methods=['POST'])
+def import_installation():
+    body = request.get_json()
+    orgRepository = Repository(GithubOrg, g.session)
+    org = orgRepository.find_one(GithubOrg.installation_id == body['installation_id'], GithubOrg.tenant_id == g.tenant.id)
+    
+    if org is None:
+        return "", 404
+    
+    GithubImportService(g.session).create_import_request(org.tenant, org)
+
+    return "", 201
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

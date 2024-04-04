@@ -16,16 +16,23 @@ class StatsService:
         prRepository = PullRequestRepository(self.session)
         userService = UsersService(self.session)
         
-        managerIds = userService.get_manager_chain(managerId)
-        reports = userService.get_all_reports(managerId, directOnly=False)
+        managerIds = None
+        if managerId is not None:
+            managerIds = userService.get_manager_chain(managerId)
+            
+        if managerId is not None:
+            reports = userService.get_all_reports(managerId, directOnly=False)
+            total_swes = len(reports)
+            total_swes_prev = len(reports)
+        else:
+            users_count = userService.get_all_users_count()
+            total_swes = users_count
+            total_swes_prev = users_count
 
         difference = end_date - start_date 
         start_date_prev = start_date - difference 
         end_date_prev = start_date
         
-        total_swes = len(reports)
-        total_swes_prev = len(reports)
-
         result = prRepository.list_all(start_date, end_date, managers_ids=managerIds)
         result_prev = prRepository.list_all(start_date_prev, end_date_prev, managers_ids=managerIds)
 
@@ -77,9 +84,14 @@ class StatsService:
         prRepository = PullRequestRepository(self.session)
         userService = UsersService(self.session)
         
-        managerIds = userService.get_manager_chain(managerId)
-        reports = userService.get_all_reports(managerId, directOnly=False)
-        total_swes = len(reports)        
+        if managerId is not None:
+            managerIds = userService.get_manager_chain(managerId)
+            reports = userService.get_all_reports(managerId, directOnly=False)
+            total_swes = len(reports)      
+        else:
+            users_count = userService.get_all_users_count()
+            total_swes = users_count
+            managerIds = None  
 
         result = prRepository.list_all(start_date, end_date, managerIds)
         result = result.data if result else []
