@@ -1,5 +1,7 @@
 import datetime
+import json
 from types import SimpleNamespace
+from aws.secret import get_aws_secret
 import jwt
 import time
 from cryptography.hazmat.backends import default_backend
@@ -8,7 +10,7 @@ import app_config
 import requests
 from cachetools import cached, TTLCache
 from utils import log_exceptions
-from services.keyVaultClient import get_secret
+
 import base64
 
 # global variables
@@ -21,19 +23,15 @@ access_token_cache = TTLCache(maxsize=10000, ttl=3000)
 def setup_github_app():
     global app_id
     global private_key
+    
+    secret_name = "prod/githubcert"
 
-    certStr = get_secret("githubappcertificate")
-    def decode_base64_string(base64_string: str) -> str:
-        decoded_bytes = base64.b64decode(base64_string)
-        decoded_string = decoded_bytes.decode('utf-8')
-        return decoded_string
-
-    decoded_cert = decode_base64_string(certStr)
+    certStr = get_aws_secret(secret_name, app_config.AWS_REGION)
     # Your GitHub App's identifier
     app_id = app_config.GITHUB_APP_ID
 
     private_key = serialization.load_pem_private_key(
-        decoded_cert.encode(),
+        certStr.encode(),
         password=None,
         backend=default_backend()
     )
@@ -111,6 +109,33 @@ def github_gql_query(query:str, installation_id:str) -> dict:
     
     return result
 
+def get_org_repos(installation_id, org_name, cursor=None):
+    afterFilter = f', after: "{cursor}"' if cursor else ''
+    query = f"""
+    {{
+        organization(login: "{org_name}") {{
+            repositories(first: 100{afterFilter}) {{
+                totalCount
+                pageInfo {{
+                    hasNextPage
+                    endCursor
+                }}
+                nodes {{
+                    name
+                    url
+                    id
+                    databaseId
+                    isPrivate
+                    isArchived
+                    isDisabled
+                    isLocked
+                    nameWithOwner
+                }}
+            }}
+        }}
+    }}"""
+    return github_gql_query(query, installation_id)
+   
     
 def get_repo_pull_requests(installation_id, repo_full_name, cursor=None):
     afterFilter = f', after: {cursor}' if cursor else ''

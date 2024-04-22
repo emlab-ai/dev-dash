@@ -26,7 +26,7 @@ class User(Base):
         self.name = name
         self.manager_id = manager_id
         self.is_manager = is_manager
-        self.teamId = team_id
+        self.team_id = team_id
         self.email = email
         self.github_user_id = github_user_id
         self.tags = tags
@@ -45,5 +45,21 @@ class User(Base):
             'level': self.level,
             'tenant': self.tenant.to_dict() if self.tenant else None,
             'team': self.team.to_dict() if self.team else None,
+            'manager': self.manager.to_dict() if self.manager else None,
             'githubUser': self.github_user.to_dict() if self.github_user else None
         }
+        
+    def from_dict(data):
+        return User(
+            id = data.get('id', None),
+            name = data.get('name', None),
+            tenant_id = data.get('tenantId', data.get('tenant', {}).get('id', None)),
+            team_id = data.get('teamId', data.get('team', {}).get('id', None)),
+            email = data.get('email', None),
+            github_user_id = data.get('githubUserId', None),
+            tags = data.get('tags', None),
+            manager_id = data.get('managerId', None),
+            level = data.get('level', None),
+            is_manager = data.get('isManager', False)
+        )
+        

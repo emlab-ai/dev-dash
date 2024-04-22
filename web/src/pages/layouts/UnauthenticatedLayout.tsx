@@ -57,7 +57,6 @@ export default function Layout() {
         </Head>
         <Flex as="nav" alignItems="center" justifyContent="space-between" h='16' py='2.5' pr="2.5">
             <HStack spacing={2}>
-
                 <img src="/public/logo.svg" alt="Logo" width="36px" style={{marginLeft: 12}}/>
                 <IconButton {...buttonProps} _active='none' _focus='none' _hover='none' fontSize="18px" variant='ghost' icon={<BiMenu />} aria-label='open menu'/>
                 <Heading as='h1' size="md">{BrandName}</Heading>

@@ -95,7 +95,7 @@ export default function UserEditDrawer({ isOpen, onClose, onDelete, mode, value 
                         </FormControl>
                         <FormControl mt={4}>
                             <FormLabel>Level</FormLabel>
-                            <Select placeholder="Select a level" {...register('level', { required: true })}>
+                            <Select placeholder="Select a level" {...register('level', { required: false })}>
                                 {(wathchIsManager ?
                                     levels.managers :
                                     levels.ics).map((level) => (

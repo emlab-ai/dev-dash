@@ -51,6 +51,7 @@ export const useOrgSettingsModel = (): OrgSettingsModel => {
                 data : JSON.stringify({installation_id: installationId})
             });
             const result = await response.data;
+            console.log(result);
 
         } catch (error) {
             console.error('Error fetching reviews', error);

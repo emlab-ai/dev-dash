@@ -17,8 +17,6 @@ ChartJS.register(
     ...registerables
 );
 
-
-
 export default function App() {
     const toast = useToast();
 

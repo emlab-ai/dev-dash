@@ -29,7 +29,7 @@ export default function Column () {
                             </VStack>
                         </HStack>
                     </VStack>
-                </Box>
+                </Box> 
                 <Box w={{ base: '100%', lg: '50%' }} minH="100vh" p='16'>
                     <VStack align="center" spacing="5" justify="center" h="100%" alignItems="stretch">
                         <Heading as='h1' fontSize="3xl" textAlign="center">Sign in to {BrandName}</Heading>

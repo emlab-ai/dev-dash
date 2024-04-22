@@ -79,8 +79,8 @@ function UsersSettings() {
                         <Tr key={user.id} onClick={()=>onEdit(user)}  _hover={{ bg: hoverColor, cursor: "pointer" }}>
                             <Td><Avatar name={user.name} size='sm'/></Td>                            
                             <Td>{user.name}</Td>
-                            <Td>{user.managerName}</Td>
-                            <Td>{user.teamName}</Td>
+                            <Td>{user.manager?.name}</Td>
+                            <Td>{user.team?.name}</Td>
                             <Td>{user.gitAlias}</Td>
                             <Td>{user.email}</Td>
                         </Tr>

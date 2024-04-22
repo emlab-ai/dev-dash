@@ -15,6 +15,7 @@ import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-reac
 import UnauthenticatedLayout from '@src/pages/layouts/UnauthenticatedLayout'
 import { Box, Text } from '@chakra-ui/react'
 import OrgSettings from '@src/pages/settings/org/OrgSettings'
+import SignupPage from '@src/pages/auth/SignupPage'
 
 
 export default function Router () {
@@ -32,6 +33,7 @@ export default function Router () {
                                 <Route path="teams" element={<TeamsSettings />} />
                                 <Route path="users" element={<UsersSettings />} />
                             </Route>         
+                            <Route path="signup" element={<SignupPage />} />
                     </Route>       
                 </Routes>           
             </UserDataProvider>
@@ -39,7 +41,8 @@ export default function Router () {
         <UnauthenticatedTemplate>
             <Routes>
                 <Route path="/" element={<UnauthenticatedLayout />}>
-                        <Route path="login" element={<LoginPage />} />
+                    <Route path="login" element={<LoginPage />} />
+                    <Route path="signup" element={<SignupPage />} />
                 </Route>
             </Routes>
         </UnauthenticatedTemplate>

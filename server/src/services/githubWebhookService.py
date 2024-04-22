@@ -4,11 +4,11 @@ import logging
 
 from cachetools import TTLCache, cached
 from db.model.githubIssue import GithubIssue
-from events.producer import github_events_producer
 from azure.eventhub import EventData
 
 from db.model import PullRequest, GithubEvent, GithubRepo, GithubOrg, GithubInstallation, GithubUser,GithubIssueComment, GithubPullRequestReviewComment, GithubPullRequestReview
 from db.repository.repository import Repository
+from events.producer import publish_to_kinesis
 from services.githubImportService import GithubImportService
 from utils import log_exceptions
 from services.event_helpers import issue_comment_to_model, issue_to_model, pull_request_event_to_model, pull_request_review_comment_to_model, pull_request_review_to_model, repository_to_model
@@ -23,10 +23,7 @@ class GithubWebhookService:
 
     @log_exceptions(log_args = True)
     def record_event(self, event_type, deliveryId, data):
-        # Create a batch.
-        with github_events_producer:
-            event_batch = github_events_producer.create_batch()
-
+       
             body = {
                 "data": data,
                 "event_type": event_type,
@@ -43,10 +40,8 @@ class GithubWebhookService:
                 "event_type": event_type,
                 "delivery_id": deliveryId              
             }
-            # Add events to the batch.
-            event_batch.add(event_data)
-
-            github_events_producer.send_batch(event_batch)        
+            
+            publish_to_kinesis("github_events", str(deliveryId), event_data)      
         
     def process_event(self, event_type, deliveryId, data):
         eventRepo = Repository(GithubEvent, self.session)
@@ -79,6 +74,7 @@ class GithubWebhookService:
         except Exception as e:
             logging.error(f"Failed to process event {event_type} for installation {installationId}, error: {e}")
             eventRepo.create(GithubEvent(installation_id = installationId,
+                data=data,
                 received_at = datetime.utcnow(),
                 failed = True,
                 error_text = str(e),
@@ -136,7 +132,7 @@ class GithubWebhookService:
                     avatar_url= orgJson["avatar_url"],
                     installation_id= installationId,
                     type= orgJson["type"])                
-                orgRepository.create(org)
+                orgRepository.upsert(org)
                 inst.org_id = org_id
                 instRepository.update(inst)
 
@@ -163,7 +159,7 @@ class GithubWebhookService:
         org = orgRepository.find_one(GithubOrg.installation_id == installationId)
 
         for repo in data["repositories_added"]:
-            repoRepository.create(repository_to_model(tenant, org, repo))
+            repoRepository.upsert(repository_to_model(tenant, org, repo))
         
         for repo in data["repositories_removed"]:
             repo = repoRepository.get(repo["id"])

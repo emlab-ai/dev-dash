@@ -10,7 +10,7 @@ interface UsersSettingsModel {
     hasNext: boolean;
     hasPrev: boolean;
     createUserAsync: (user: User) => Promise<void>;
-    deleteUserAsync: (userId: string) => Promise<void>;
+    deleteUserAsync: (userId: number) => Promise<void>;
     updateUserAsync: (user: User) => Promise<void>;
     refreshAsync: () => Promise<void>;
     cursor: string;
@@ -62,27 +62,23 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
     }, [backendClient]);
 
     const createUserAsync = useCallback(async (user: User) => {
-        var requestInfo = {
+        const response = await backendClient('/api/users', {
             method: 'POST',
             headers:
                 { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user)
-        };
-
-        const response = await backendClient('/api/users', requestInfo);
+            data: JSON.stringify(user)
+        });
         const result = await response.data;
         setUsers((users) => [...users, result]);
     }, [backendClient, setUsers]);
 
     const updateUserAsync = useCallback(async (user: User) => {
-        var requestInfo = {
+        const response = await backendClient('/api/users', {
             method: 'PUT',
             headers:
                 { 'Content-Type': 'application/json' },
-            body: JSON.stringify(user)
-        };
-
-        const response = await backendClient('/api/users', requestInfo);
+            data: JSON.stringify(user)
+        });
         const result = await response.data;
 
         setUsers((users) => {
@@ -93,12 +89,11 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         });
     }, [users, backendClient, setUsers]);
 
-    const deleteUserAsync = useCallback(async (userId: string) => {
-        var requestInfo = {
+    const deleteUserAsync = useCallback(async (userId: number) => {
+        const response = await backendClient(`/api/users/${userId}`, {
             method: 'DELETE'
-        };
-
-        const response = await backendClient(`/api/users/${userId}`, requestInfo);
+        });
+        
         if (response.status !== 204) {
             console.error('Error deleting a user');
             return;

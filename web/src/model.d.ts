@@ -5,7 +5,7 @@ export interface Team {
     name: string;
     parentName?: string;
     parentId?: number;
-    gitHubTeamId?: number;
+    githubTeamId?: number;
     members?: TeamMember[];
     tags?: string[];
 }
@@ -21,13 +21,13 @@ export interface User {
     githubUserId?: number;
     tags?: string;
     gitAlias?: string;
+    manager?: User;
     managerId?: number;
-    managerName?: string;
     isManager?: boolean;
     level?: string;
     email?: string;
+    team?: Team;
     teamId?: number;
-    teamName?: string;
 }
 
 export interface PagedResult<Data extends object> {

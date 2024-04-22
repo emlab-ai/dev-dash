@@ -11,10 +11,7 @@ interface TeamEditDrawerProps {
     value?:Team;
 }
 const initialState = {
-    name: "",
-    parentId: "",
-    gitHubTeamId: undefined,
-    tags: []
+    name: ""
 };
 
 export default function TeamEditDrawer({isOpen, onClose, onDelete, mode, value}:TeamEditDrawerProps) {

@@ -7,9 +7,10 @@ from db.model.githubUser import GithubUser
 from db.model.pullRequest import PullRequest
 from db.model.tenant import Tenant
 from db.repository.repository import Repository
-from services.githubClient import get_repo_pull_requests, github_gql_query
+from events.producer import publish_to_kinesis
+from services.githubClient import get_org_repos, get_repo_pull_requests, github_gql_query
 from utils import log_exceptions
-from events.producer import github_import_producer
+# from events.producer import github_import_producer
 from azure.eventhub import EventData
 
 def pull_request_response_to_model(tenant, org, response) -> List[PullRequest]:
@@ -78,23 +79,43 @@ class GithubImportService:
         if event_type == "import_users":
             self._fetch_org_users(tenant_id, installation_id, org_name, cursor)
         elif event_type == "import_teams":
-            pass
+            pass        
         elif event_type == "import_repository":
             self.import_repository(tenant_id, installation_id, data["repo_full_name"])
       
     @log_exceptions(log_args = True)
     def create_import_request(self, tenant, org):
-        with github_import_producer:
-            event_batch = github_import_producer.create_batch()
-
-            send_message(event_batch, 'import_users', tenant.id, org.installation_id, {"org_name": org.name})
-            send_message(event_batch, 'import_teams', tenant.id, org.installation_id, {})
-            
-            repositories = self.repoRepository.find_all(GithubRepo.org_id == org.id , GithubRepo.tenant_id==tenant.id)
+        # with github_import_producer:
+            # event_batch = github_import_producer.create_batch()
+        publish_to_kinesis("github_import", str(tenant.id), {"event_type": "import_users", "tenant_id": tenant.id, "installation_id": org.installation_id, "data": {"org_name": org.name}})
+            # send_message(event_batch, 'import_users', tenant.id, org.installation_id, {"org_name": org.name})
+            # send_message(event_batch, 'import_teams', tenant.id, org.installation_id, {})
+        publish_to_kinesis("github_import", str(tenant.id), {"event_type": "import_teams", "tenant_id": tenant.id, "installation_id": org.installation_id, "data": {}})            
+        repos_result = get_org_repos(org.installation_id, org.name)
+        repositories = repos_result.data.organization.repositories.nodes
+        
+        while(True):
             for repo in repositories:
-                send_message(event_batch, 'import_repository', tenant.id, org.installation_id, {"repo_full_name": repo.full_name})
+                githubRepo = GithubRepo(
+                    id = repo.databaseId,
+                    tenant_id = tenant.id,
+                    org_id = org.id,
+                    name = repo.name,
+                    node_id= repo.id,
+                    private = repo.isPrivate,
+                    deleted = False,
+                    full_name =  repo.nameWithOwner
+                )
+                self.repoRepository.upsert(githubRepo)
+                # send_message(event_batch, 'import_repository', tenant.id, org.installation_id, {"repo_full_name": repo.nameWithOwner})
+                publish_to_kinesis("github_import", str(tenant.id), {"event_type": "import_repository", "tenant_id": tenant.id, "installation_id": org.installation_id, "data": {"repo_full_name": repo.nameWithOwner}})
+            pageInfo = repos_result.data.organization.repositories.pageInfo
+            if pageInfo.hasNextPage:
+                repos_result = get_org_repos(org.installation_id, org.name, pageInfo.endCursor)
+            else:
+                break
 
-            github_import_producer.send_batch(event_batch)
+            # github_import_producer.send_batch(event_batch)
    
     def _fetch_org_users(self, tenant_id, installation_id, org_name, cursor=None):
         after = "" if cursor is None else f', after: "{cursor}"'

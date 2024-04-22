@@ -40,28 +40,25 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
 
 
     const createTeamAsync = useCallback(async (team: Team) => {
-        var requestInfo = {
+        const response = await axiosFetch('/api/teams', {
             method: 'POST',
             headers: 
                 {'Content-Type': 'application/json'},
             data: JSON.stringify(team)
-        };
-
-        const response = await axiosFetch('/api/teams', requestInfo);
+        });
         const result = await response.data;
         setTeams((teams)=>[...teams, result]);
     }, [axiosFetch, setTeams])
 
 
     const updateTeamAsync = useCallback(async (team: Team) => {
-        var requestInfo = {
+        const response = await axiosFetch('/api/teams', {
             method: 'PUT',
             headers: 
                 {'Content-Type': 'application/json'},
-            body: JSON.stringify(team)
-        };
+            data: JSON.stringify(team)
+        });
 
-        const response = await axiosFetch('/api/teams', requestInfo);
         const result = await response.data;
         
         setTeams((teams)=>{
@@ -74,11 +71,10 @@ export const useTeamsSettingsModel = (): TeamsSettingsModel => {
 
 
     const deleteTeamAsync = useCallback(async (teamId: number) => {
-        var requestInfo = {
+        const response = await axiosFetch(`/api/teams/${teamId}`, {
             method: 'DELETE'
-        };
-
-        const response = await axiosFetch(`/api/teams/${teamId}`, requestInfo);
+        });
+        
         if (response.status !== 204) {
             console.error('Error deleting team');
             return;

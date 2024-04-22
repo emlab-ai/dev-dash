@@ -21,3 +21,10 @@ def log_exceptions(log_args=False):
                 raise
         return wrapper
     return decorator
+
+
+def none_if_empty(value):
+    """
+    Returns None if the value is empty, otherwise returns the value.
+    """
+    return None if value == "" else value

@@ -38,10 +38,10 @@ export type PullRequest = {
 
 interface PullRequestsModel {
     timeFilter: string;
-    managerFilter: string;
+    managerFilter?: number;
     pullRequestsStats: PullRequestsStats | null;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: string) => void;
+    setManagerFilter: (managerFilter?: number) => void;
     pullRequestQuery: ReturnType<typeof useInfiniteQuery<PagedResult<PullRequest>>>;
     sorting: SortingState;
     setSorting: (sorting: SortingState) => void;
@@ -57,7 +57,7 @@ interface PullRequestsStats {
 export const usePullRequestsModel = (): PullRequestsModel => {
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
+    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
     const [sorting, setSorting] = useState<SortingState>([]);
     const backendClient = useAxiosClient();

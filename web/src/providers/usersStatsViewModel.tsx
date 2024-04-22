@@ -21,16 +21,16 @@ type UserStat = {
 interface UsersStatsModel {
     usersStats: UserStat[];
     timeFilter: string;
-    managerFilter: string;
+    managerFilter?: number;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: string) => void;
+    setManagerFilter: (managerFilter?: number) => void;
     fetchUserStatsAsync: () => Promise<void>;
 }
 
 export const useUsersStatsModel = (): UsersStatsModel => {    
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
+    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const [usersStats, setUsersStats] = useState<UserStat[]>([]);
     const backendClient = useAxiosClient();
 

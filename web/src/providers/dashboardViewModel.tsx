@@ -43,16 +43,16 @@ interface DashboardModel {
     topManager: User  | undefined;
     stats: Stats;
     timeFilter: string;
-    managerFilter: string;
+    managerFilter?: number;
     setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter: string) => void;
+    setManagerFilter: (managerFilter?: number) => void;
     fetchStatsAsync: () => Promise<void>;
 }
 
 export const useDashboardModel = (): DashboardModel => {
     const { users, managers, topManager } = useOrgProviderContext();
     const [timeFilter, setTimeFilter] = useState('1month');
-    const [managerFilter, setManagerFilter] = useState(topManager?.id ?? '');
+    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const [stats, setStats] = useState(initialStats);
     const backendClient = useAxiosClient();
 

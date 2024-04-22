@@ -2,7 +2,7 @@ import base64
 import json
 from typing import Callable, Generic, List, Type, TypeVar
 from sqlalchemy import ColumnExpressionArgument, and_, or_
-from sqlalchemy.orm import Session, Query
+from sqlalchemy.orm import Session, Query, joinedload
 from sqlalchemy.exc import IntegrityError
 from db.model.pagedResult import PagedResult, process_paged_result
 
@@ -19,6 +19,12 @@ def encode_cursor(id, sort_by: str, sort_by_value) -> str:
 def decode_cursor(cursor: str) -> dict:
     decoded_string = base64.b64decode(cursor).decode('utf-8')
     return json.loads(decoded_string)
+
+def apply_joinedload(model, query: Query, expand: List[str]) -> Query:
+    if expand:
+        for expandedProp in expand:
+            query = query.options(joinedload(getattr(model, expandedProp)))
+    return query
 
 def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], orderAttr, sort_order):
     if after:
@@ -72,24 +78,33 @@ class Repository(Generic[T]):
                 self.session.commit()
         return item
 
-    def get(self, item_id:int, tenant_id: int = None) -> T:
+    def get(self, item_id:int, tenant_id: int = None, expand:List[str]=None) -> T:
         query = self.session.query(self.model).filter(self.model.id == item_id)
         if (tenant_id):
             query = query.filter(self.model.tenant_id == tenant_id)
+            
+        query = apply_joinedload(self.model, query, expand)
 
         item = query.first()
         return item
     
-    def find_one(self, *criterion: ColumnExpressionArgument[bool]) -> T:
+    def find_one(self, *criterion: ColumnExpressionArgument[bool], expand:List[str]=None) -> T:
         query = self.session.query(self.model)
         query = query.filter(*criterion)
+        
+
+        query = apply_joinedload(self.model, query, expand)
+                
         item = query.first()
         return item
     
-    def find_all(self, *criterion: ColumnExpressionArgument[bool])-> List[T]:
+    def find_all(self, *criterion: ColumnExpressionArgument[bool], expand:List[str]=None)-> List[T]:
         query = self.session.query(self.model)
         if (criterion):
             query = query.filter(*criterion)
+        
+        query = apply_joinedload(self.model, query, expand)
+            
         result = query.all()
         return result
     
@@ -99,7 +114,7 @@ class Repository(Generic[T]):
             query = query.filter(*criterion)
         return query.count()
 
-    def _list_all(self, buildQuery: Callable[[Query[any]], Query[any]], builOrderAttr:Callable[[], any], limit=None, after=None, before=None, sort_by:str=None, sort_order:str=None):
+    def _list_all(self, buildQuery: Callable[[Query[any]], Query[any]], builOrderAttr:Callable[[], any], limit=None, after=None, before=None, sort_by:str=None, sort_order:str=None, expand:List[str]=None):
         if before is not None and after is not None:
             raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
         
@@ -108,6 +123,8 @@ class Repository(Generic[T]):
         
         query = buildQuery(query)
         orderAttr = builOrderAttr()
+        
+        query = apply_joinedload(self.model, query, expand)
 
         query = add_cursor_filter[T](self.model, query, after, before, sort_by, orderAttr, sort_order)
             

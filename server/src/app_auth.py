@@ -67,7 +67,7 @@ def validate_token():
 
     g.tenant = tenant
 
-    user = userRepository.get_by_email(upn)
+    user = userRepository.find_one(User.email == upn, User.tenant_id == tenant.id)
     if not user:
         user = User(
                     email=upn,

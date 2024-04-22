@@ -8,9 +8,6 @@ class TeamRepository:
         self.session = session
 
     def create_team(self, team):
-        if team.parentId == "":
-            team.parentId = None
-
         self.session.add(team)    
         self.session.commit()
         return team

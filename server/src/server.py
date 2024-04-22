@@ -9,7 +9,6 @@ from db.model.user import User
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository, TenantRepository
 from app_auth import validate_token
-from app_insights import setup_app_insights
 from db.model import GithubInstallation
 from db.repository.repository import Repository
 from app_sql import setup_sql_engine
@@ -23,6 +22,8 @@ from datetime import datetime
 import app_config
 import uuid
 
+from utils import none_if_empty
+
 logging.basicConfig()
 logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
 
@@ -31,7 +32,6 @@ app.debug = app_config.DEBUG
 CORS(app) 
 
 Session = setup_sql_engine(app)
-setup_app_insights()
 setup_github_app()
 
 def authorize_api_endpoints():
@@ -112,8 +112,9 @@ def update_user():
     userRepository = UserRepository(g.session)
 
     data = request.get_json()
-    user_data = User(**data)
+    user_data = User.from_dict(data)
     user = userRepository.update(user_data)
+    user = userRepository.get(user.id, tenant_id=g.tenant.id, expand=["manager", "team"])
     return jsonify(user.to_dict())
 
 
@@ -261,7 +262,11 @@ def get_teams():
 @app.route('/api/teams', methods=['POST'])
 def create_team():
     data = request.get_json()
-    team = Team(**data)
+    
+    team = Team(
+            name = data.get('name'), 
+            parent_id=none_if_empty(data.get('parentId', None)),
+            tenant_id = g.tenant.id)
 
     teamsRepo = TeamRepository(g.session)
     result = teamsRepo.create_team(team) 
@@ -274,8 +279,6 @@ def github_wh_callback():
     deliveryId = request.headers["X-GitHub-Delivery"]
     signature = request.headers["X-Hub-Signature-256"]
     userAgent = request.headers["User-Agent"]
-    installationTargetType = request.headers["X-GitHub-Hook-Installation-Target-Type"]
-    installationTargetId = request.headers["X-GitHub-Hook-Installation-Target-Id"]
 
     if not userAgent.startswith("GitHub-Hookshot/"):
         print(f"Invalid user agent: {userAgent}")
@@ -313,8 +316,6 @@ def delete_team(id:str):
 def get_tenant():
     return jsonify(g.tenant.to_dict())
 
-
-# https://emlab.ai/github/installation?installation_id=48941751&setup_action=install&state=123
 
 @app.route('/github/installation', methods=['GET'])
 def register_installation_id():

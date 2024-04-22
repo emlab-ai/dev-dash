@@ -1,7 +1,6 @@
 import json
 import logging
 
-from app_insights import setup_app_insights
 from azure.functions import EventHubEvent
 from typing import List
 
@@ -11,22 +10,23 @@ from ..services.githubWebhookService import GithubWebhookService
 import app_config
 
 
-connection_string = app_config.SQL_DATABASE_URI 
+if app_config.DB_HOSTNAME:
+    connection_string = f"postgresql://{app_config.DB_USERNAME}:{app_config.DB_PASSWORD}@{app_config.DB_HOSTNAME}:5432/{app_config.DB_NAME}"
+else: connection_string = app_config.SQL_DATABASE_URI 
+
 engine = create_engine(connection_string, echo=True)
 Session = sessionmaker(bind=engine)
 
-setup_app_insights()
-
-def main(events: List[EventHubEvent]):
+def lambda_handler(event, context):
     session = Session()
     githubService = GithubWebhookService(session)
     try:
-        for event in events:        
+        for event in event['Records']:
             bodyStr = event.get_body().decode('utf-8')
             logging.info('Python EventHub trigger processed an event: %s', bodyStr)
             body = json.loads(bodyStr)
             
-            githubService.process_event(body["event_type"], body["delivery_id"], body["installation_target_type"], body["installation_target_id"], body["data"])
+            githubService.process_event(body["event_type"], body["delivery_id"], body["data"])
         session.commit()
     except Exception as e:
         session.rollback()

@@ -1,0 +1,30 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-emlabamplify-dev-5f676-authRole",
+      "UnauthRoleArn": "arn:aws:iam::834803522181:role/amplify-emlabamplify-dev-5f676-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::834803522181:role/amplify-emlabamplify-dev-5f676-authRole",
+      "Region": "eu-west-2",
+      "DeploymentBucketName": "amplify-emlabamplify-dev-5f676-deployment",
+      "UnauthRoleName": "amplify-emlabamplify-dev-5f676-unauthRole",
+      "StackName": "amplify-emlabamplify-dev-5f676",
+      "StackId": "arn:aws:cloudformation:eu-west-2:834803522181:stack/amplify-emlabamplify-dev-5f676/ec024720-fe38-11ee-8c74-02ae6e70562d",
+      "AmplifyAppId": "d897aitgeg3rb",
+      "APIGatewayAuthURL": "https://s3.amazonaws.com/amplify-emlabamplify-dev-5f676-deployment/amplify-cfn-templates/api/APIGatewayAuthStack.json"
+    },
+    "categories": {
+      "function": {
+        "testfunc": {}
+      },
+      "auth": {
+        "emlabamplify": {}
+      },
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "d897aitgeg3rb",
+          "type": "manual"
+        }
+      }
+    }
+  }
+}

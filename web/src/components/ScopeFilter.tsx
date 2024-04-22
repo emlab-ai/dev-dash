@@ -7,8 +7,8 @@ import UserSelect from "./UserSelect";
 type ScopeFilterProps = {
   timeFilter: string;
   setTimeFilter: (timeFilter: string) => void;
-  managerFilter: string;
-  setManagerFilter: (managerFilter: string) => void;
+  managerFilter?: number;
+  setManagerFilter: (managerFilter?: number) => void;
 }
 
 export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, setManagerFilter }: ScopeFilterProps) {
