@@ -5,6 +5,7 @@ import aws_cdk as cdk
 
 from constructs import Construct
 from aws_cdk import (
+    BundlingOptions,
     aws_sqs as sqs,
     aws_iam as iam,
     aws_apigateway as apigw,
@@ -18,13 +19,21 @@ from aws_cdk import (
     aws_certificatemanager as acm,
     aws_route53_targets as targets,
     aws_rds as rds,
+    aws_s3 as s3,
+    aws_s3_assets as s3_assets,
+    aws_ecr_assets as ecr_assets,
     aws_elasticloadbalancingv2 as elbv2,
     aws_elasticloadbalancingv2_targets as targets,
-    Aws, Stack, Duration, CfnOutput
+    Aws, Stack, Duration, CfnOutput, RemovalPolicy
 )
 
 aws_region = "eu-west-2"
 account_id = '834803522181'
+
+gitignore_file_path = "../../.gitignore"
+with open(gitignore_file_path, "r") as file:
+    python_deploy_exclude = file.readlines()
+python_deploy_exclude = [line.strip() for line in python_deploy_exclude]
 
 class EmlabCdkStack(Stack):
 
@@ -38,29 +47,29 @@ class EmlabCdkStack(Stack):
                         
         
         vpc = ec2.Vpc(self, 
-                        "EmlabVpc",
-                        max_azs=2,
-                        cidr="10.0.0.0/16",
-                        gateway_endpoints={
-                        "S3": ec2.GatewayVpcEndpointOptions(
-                            service=ec2.GatewayVpcEndpointAwsService.S3
-                        )},
-                        subnet_configuration=[
-                            ec2.SubnetConfiguration(
-                                name="public", cidr_mask=24,
-                                reserved=False, subnet_type=ec2.SubnetType.PUBLIC),
-                            ec2.SubnetConfiguration(
-                                name="private", cidr_mask=24,
-                                reserved=False, subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-                            ec2.SubnetConfiguration(
-                                name="DB", cidr_mask=24,
-                                reserved=False, subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
-                            ),
-                        ],
-                        enable_dns_hostnames=True,
-                        enable_dns_support=True,
-                        nat_gateways=1
-                      )
+            "EmlabVpc",
+            max_azs=2,
+            cidr="10.0.0.0/16",
+            gateway_endpoints={
+            "S3": ec2.GatewayVpcEndpointOptions(
+                service=ec2.GatewayVpcEndpointAwsService.S3
+            )},
+            subnet_configuration=[
+                ec2.SubnetConfiguration(
+                    name="public", cidr_mask=24,
+                    reserved=False, subnet_type=ec2.SubnetType.PUBLIC),
+                ec2.SubnetConfiguration(
+                    name="private", cidr_mask=24,
+                    reserved=False, subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+                ec2.SubnetConfiguration(
+                    name="DB", cidr_mask=24,
+                    reserved=False, subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+                ),
+            ],
+            enable_dns_hostnames=True,
+            enable_dns_support=True,
+            nat_gateways=1
+            )
         
         # VPC Interface Endpoints
         ec2.InterfaceVpcEndpoint(self, "VPC Endpoint Docker",
@@ -210,26 +219,70 @@ class EmlabCdkStack(Stack):
         github_events_stream = kinesis.Stream(self, "github_events", stream_name="github_events")
         
         # Define the Lambda function
-        process_github_import_lambda_function = _lambda.Function(
-            self, "process_github_import_events",
-            runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="process_github_import",
-            code=_lambda.Code.from_asset("../../server/src"),
-            environment={
-                "DB_PASSWORD": str(ecs.Secret.from_secrets_manager(db.secret, field="password")),
-                "STREAM_NAME": github_import_stream.stream_name,
-                "DB_USERNAME": "emlabserver",
-                "DB_HOSTNAME": db.db_instance_endpoint_address,
-                "DB_NAME": "EmlabDatabase"
-            }
+        
+        # Define the Docker image asset
+        docker_import_image = ecr_assets.DockerImageAsset(self, "ImportLambdaImage",
+            directory="../../server",
+            file="./build/lambda_import/Dockerfile",
+            platform=ecr_assets.Platform.LINUX_AMD64            
         )
         
+        docker_events_image = ecr_assets.DockerImageAsset(self, "EventsLambdaImage",
+            directory="../../server",
+            file="./build/lambda_events/Dockerfile",
+            platform=ecr_assets.Platform.LINUX_AMD64            
+        )
+
+        # Create the Lambda function using the Docker image
+        process_github_import_lambda_function = _lambda.DockerImageFunction(
+            self, "ImportLambdaFunction",
+            code=_lambda.DockerImageCode.from_ecr(
+                repository=docker_import_image.repository,
+                tag=docker_import_image.image_tag
+            ),
+            timeout=Duration.seconds(60)
+        )
+        
+        process_github_events_lambda_function = _lambda.DockerImageFunction(
+            self, "EventsLambdaFunction",
+            code=_lambda.DockerImageCode.from_ecr(
+                repository=docker_events_image.repository,
+                tag=docker_events_image.image_tag
+            ),
+            timeout=Duration.seconds(60)
+        )
+        
+        github_secret_arn="arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/githubcert-ybijhW"
+        process_github_import_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[github_secret_arn]
+            )
+        )
+        
+        process_github_events_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[github_secret_arn]
+            )
+        )
+                
         # Grant the Lambda function permissions to read the secret
         db.secret.grant_read(process_github_import_lambda_function.role)
-        
-        # Ensure Lambda has permissions to write to the stream
         github_import_stream.grant_read(process_github_import_lambda_function)
+        
+        db.secret.grant_read(process_github_events_lambda_function.role)
+        github_events_stream.grant_read(process_github_events_lambda_function)
+        
+        # Create a Kinesis event source
+        kinesis_event_source = lambda_event_source.KinesisEventSource(
+            github_import_stream,  # the Kinesis stream
+            starting_position=_lambda.StartingPosition.TRIM_HORIZON
+        )
 
+        # Add the Kinesis event source to the Lambda function
+        process_github_import_lambda_function.add_event_source(kinesis_event_source)
+     
         CfnOutput(
             self, "LoadBalancerDNS",
             value=fargate_service.load_balancer.load_balancer_dns_name

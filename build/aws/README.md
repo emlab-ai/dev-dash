@@ -68,3 +68,8 @@ docker tag emlab-server:latest 834803522181.dkr.ecr.eu-west-2.amazonaws.com/emla
 
 docker push 834803522181.dkr.ecr.eu-west-2.amazonaws.com/emlab:latest
 
+#Invoke lambda locally
+
+curl -XPOST "http://127.0.0.1:3001/2015-03-31/functions/process_github_events/invocations" -d '{}'
+
+sam local generate-event kinesis get-records |

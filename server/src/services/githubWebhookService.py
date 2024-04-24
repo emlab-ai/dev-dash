@@ -13,6 +13,7 @@ from services.githubImportService import GithubImportService
 from utils import log_exceptions
 from services.event_helpers import issue_comment_to_model, issue_to_model, pull_request_event_to_model, pull_request_review_comment_to_model, pull_request_review_to_model, repository_to_model
 from services.githubClient import github_gql_query
+import app_config
 
 tenant_cache = TTLCache(maxsize=10000, ttl=300000)
 
@@ -41,7 +42,7 @@ class GithubWebhookService:
                 "delivery_id": deliveryId              
             }
             
-            publish_to_kinesis("github_events", str(deliveryId), event_data)      
+            publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), event_data)      
         
     def process_event(self, event_type, deliveryId, data):
         eventRepo = Repository(GithubEvent, self.session)

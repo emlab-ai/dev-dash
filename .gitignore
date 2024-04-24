@@ -41,3 +41,7 @@ __azurite_db_queue_extent__.json
  *.zip
 
 __azurite_db_table__.json
+
+ptvsd
+ptvsd-4.3.2.dist-info
+cdk.out

@@ -47,6 +47,8 @@ APP_INSIGHTS_CONNECTION_STRING = os.getenv('APP_INSIGHTS_CONNECTION_STRING', 'In
 
 AWS_REGION = os.getenv('AWS_REGION', 'eu-west-2')
 
+IMPORT_STREAM_ARN=os.getenv('IMPORT_STREAM_ARN', "arn:aws:kinesis:eu-west-2:834803522181:stream/github_import")
+EVENTS_STREAM_ARN=os.getenv('EVENTS_STREAM_ARN', "arn:aws:kinesis:eu-west-2:834803522181:stream/github_events")
 
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_USERNAME = os.getenv('DB_USERNAME')
