@@ -3,9 +3,9 @@ import logging
 import base64
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from services.githubImportService import GithubImportService
 import app_config
+from app_sql import get_sql_connection_string
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -14,11 +14,7 @@ def handler(event, context):
     logger.info("Started import handler")
     
     try:
-        
-        if app_config.DB_HOSTNAME:
-            connection_string = f"postgresql://{app_config.DB_USERNAME}:{app_config.DB_PASSWORD}@{app_config.DB_HOSTNAME}:5432/{app_config.DB_NAME}"
-        else: connection_string = app_config.SQL_DATABASE_URI 
-
+        connection_string = get_sql_connection_string()
         engine = create_engine(connection_string, echo=True)
         Session = sessionmaker(bind=engine)
 

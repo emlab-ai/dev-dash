@@ -124,17 +124,19 @@ class EmlabCdkStack(Stack):
 
         # Add a container to the task definition
         
+        flask_image = ecr_assets.DockerImageAsset(self, "WebServerImage",
+            directory="../../server",
+            file="./build/web/Dockerfile",
+            platform=ecr_assets.Platform.LINUX_AMD64            
+        )
+        
         container = task_definition.add_container(
             "EmlabContainer",
-            image=ecs.ContainerImage.from_ecr_repository(repository, tag="latest"),
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="EmlabContainer"),
-            secrets={
-                "DB_PASSWORD": ecs.Secret.from_secrets_manager(db.secret, field="password")
-            },
+            # image=ecs.ContainerImage.from_ecr_repository(repository, tag="latest"),
+            image=ecs.ContainerImage.from_docker_image_asset(flask_image),
+            logging=ecs.LogDrivers.aws_logs(stream_prefix="WebServer"),
             environment={
-                "DB_USERNAME": "emlabserver",
-                "DB_HOSTNAME": db.db_instance_endpoint_address,
-                "DB_NAME": "EmlabDatabase"
+                "DB_SQL_SECRET_ARN": db.secret.secret_arn
             }
         )
         
@@ -148,8 +150,10 @@ class EmlabCdkStack(Stack):
             desired_count=1,
             task_definition=task_definition,
             memory_limit_mib=512,        
-            public_load_balancer=False
+            public_load_balancer=False            
         )
+        
+        db.secret.grant_read(fargate_service.task_definition.task_role)
         
         fargate_service.service.connections.security_groups[0].add_ingress_rule(
             peer = ec2.Peer.ipv4(vpc.vpc_cidr_block),
@@ -218,18 +222,11 @@ class EmlabCdkStack(Stack):
         github_import_stream = kinesis.Stream(self, "github_import", stream_name="github_import")
         github_events_stream = kinesis.Stream(self, "github_events", stream_name="github_events")
         
-        # Define the Lambda function
-        
+ 
         # Define the Docker image asset
-        docker_import_image = ecr_assets.DockerImageAsset(self, "ImportLambdaImage",
+        lamda_image = ecr_assets.DockerImageAsset(self, "LambdaImage",
             directory="../../server",
-            file="./build/lambda_import/Dockerfile",
-            platform=ecr_assets.Platform.LINUX_AMD64            
-        )
-        
-        docker_events_image = ecr_assets.DockerImageAsset(self, "EventsLambdaImage",
-            directory="../../server",
-            file="./build/lambda_events/Dockerfile",
+            file="./build/lambda/Dockerfile",
             platform=ecr_assets.Platform.LINUX_AMD64            
         )
 
@@ -237,19 +234,28 @@ class EmlabCdkStack(Stack):
         process_github_import_lambda_function = _lambda.DockerImageFunction(
             self, "ImportLambdaFunction",
             code=_lambda.DockerImageCode.from_ecr(
-                repository=docker_import_image.repository,
-                tag=docker_import_image.image_tag
+                repository=lamda_image.repository,
+                tag=lamda_image.image_tag,
+                cmd=["lambda_github_import.handler"]
             ),
-            timeout=Duration.seconds(60)
+            timeout=Duration.seconds(60),
+            environment={
+                "DB_SQL_SECRET_ARN": db.secret.secret_arn
+            }
         )
         
         process_github_events_lambda_function = _lambda.DockerImageFunction(
             self, "EventsLambdaFunction",
             code=_lambda.DockerImageCode.from_ecr(
-                repository=docker_events_image.repository,
-                tag=docker_events_image.image_tag
+                repository=lamda_image.repository,
+                tag=lamda_image.image_tag,
+                cmd=["lambda_github_events.handler"]
             ),
-            timeout=Duration.seconds(60)
+            
+            timeout=Duration.seconds(60),
+            environment={
+                "DB_SQL_SECRET_ARN": db.secret.secret_arn
+            }
         )
         
         github_secret_arn="arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/githubcert-ybijhW"

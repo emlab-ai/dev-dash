@@ -62,7 +62,7 @@ Enjoy!
 ECR login:
 aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 834803522181.dkr.ecr.eu-west-2.amazonaws.com/emlab
 
-docker build -f ./build/Dockerfile --platform=linux/amd64 -t emlab-server:latest .
+docker build -f ./server/build/web/Dockerfile --platform=linux/amd64 -t emlab-server:latest .
 
 docker tag emlab-server:latest 834803522181.dkr.ecr.eu-west-2.amazonaws.com/emlab:latest
 

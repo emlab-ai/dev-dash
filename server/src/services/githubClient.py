@@ -27,7 +27,7 @@ def setup_github_app():
     secret_name = "prod/githubcert"
 
     certStr = get_aws_secret(secret_name, app_config.AWS_REGION)
-    # Your GitHub App's identifier
+
     app_id = app_config.GITHUB_APP_ID
 
     private_key = serialization.load_pem_private_key(
