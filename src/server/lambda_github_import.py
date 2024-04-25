@@ -13,7 +13,7 @@ def handler(event, context):
     
     try:
         connection_string = get_sql_connection_string()
-        engine = create_engine(connection_string, echo=True)
+        engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
         Session = sessionmaker(bind=engine)
 
         session = Session()
@@ -32,7 +32,7 @@ def handler(event, context):
         print('Error processing event: %s', e)
         logger.error('Error processing event: %s', e)
         session.rollback()
-        raise
+        # raise
     finally:
         session.close()
     logger.info("Completed import handler")

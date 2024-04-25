@@ -10,6 +10,7 @@ AUDIENCE = os.getenv('AUDIENCE')
 ISSUER = os.getenv('ISSUER')
 
 DEBUG = os.getenv("DEBUG", False)
+DEBUG_SQL = os.getenv('DEBUG_SQL', False)
 
 # AUTHORITY = "https://login.microsoftonline.com/common"  # For multi-tenant app
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"

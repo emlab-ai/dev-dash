@@ -9,7 +9,7 @@ import json
 def setup_sql_engine(app):
     connection_string = get_sql_connection_string()
     app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
-    engine = create_engine(connection_string, echo=True)
+    engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
     Session = sessionmaker(bind=engine)
 
     Base.metadata.create_all(engine)

@@ -245,7 +245,9 @@ class EmlabCdkStack(Stack):
                 tag=lamda_image.image_tag,
                 cmd=["lambda_github_import.handler"]
             ),
-            timeout=Duration.seconds(60),
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
+            timeout=Duration.seconds(600),
             environment={
                 "DB_SQL_SECRET_ARN": db.secret.secret_arn
             }
@@ -258,7 +260,8 @@ class EmlabCdkStack(Stack):
                 tag=lamda_image.image_tag,
                 cmd=["lambda_github_events.handler"]
             ),
-            
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
             timeout=Duration.seconds(60),
             environment={
                 "DB_SQL_SECRET_ARN": db.secret.secret_arn

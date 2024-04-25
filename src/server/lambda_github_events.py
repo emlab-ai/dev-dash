@@ -15,7 +15,7 @@ def handler(event, context):
     try:
         connection_string = get_sql_connection_string()
 
-        engine = create_engine(connection_string, echo=True)
+        engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
         Session = sessionmaker(bind=engine)
         session = Session()
         githubService = GithubWebhookService(session)
@@ -31,7 +31,7 @@ def handler(event, context):
     except Exception as e:
         session.rollback()
         logging.error('Error processing event: %s', e)
-        raise
+        # raise
     finally:
         session.close()
     
