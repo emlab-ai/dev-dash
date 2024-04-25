@@ -8,7 +8,7 @@ COPY ./web/package-lock.json /app/package-lock.json
 RUN npm install
 
 COPY ./web /app
-COPY ./server/src /server
+COPY ./server /server
 
 
 RUN npm run build

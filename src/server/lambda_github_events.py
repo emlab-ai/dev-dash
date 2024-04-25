@@ -8,9 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from .services.githubWebhookService import GithubWebhookService
 import app_config
 from app_sql import get_sql_connection_string
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from app_logger import logger
 
 def handler(event, context):
     logger.info('Started import handler')
@@ -33,7 +31,7 @@ def handler(event, context):
     except Exception as e:
         session.rollback()
         logging.error('Error processing event: %s', e)
-        # raise
+        raise
     finally:
         session.close()
     

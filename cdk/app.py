@@ -30,11 +30,6 @@ from aws_cdk import (
 aws_region = "eu-west-2"
 account_id = '834803522181'
 
-gitignore_file_path = "../../.gitignore"
-with open(gitignore_file_path, "r") as file:
-    python_deploy_exclude = file.readlines()
-python_deploy_exclude = [line.strip() for line in python_deploy_exclude]
-
 class EmlabCdkStack(Stack):
 
     def __init__(self, scope: Construct, id: str, **kwargs) -> None:
@@ -101,6 +96,13 @@ class EmlabCdkStack(Stack):
             validation=acm.CertificateValidation.from_dns()  # Automatically validate the certificate using DNS
         )
         
+        # Create a security group for the database
+        db_security_group = ec2.SecurityGroup(self, "DbSecurityGroup",
+            vpc=vpc,
+            description="Allow inbound traffic on port 5432 from the service security group",
+            allow_all_outbound=True
+        )
+        
         # Create a PostgreSQL RDS database
         db = rds.DatabaseInstance(
             self, "EmlabDatabase",
@@ -113,7 +115,7 @@ class EmlabCdkStack(Stack):
             delete_automated_backups=True,
             deletion_protection=False,
             backup_retention=Duration.days(0),
-            security_groups=[],
+            security_groups=[db_security_group],
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
         )
         
@@ -125,7 +127,7 @@ class EmlabCdkStack(Stack):
         # Add a container to the task definition
         
         flask_image = ecr_assets.DockerImageAsset(self, "WebServerImage",
-            directory="../../server",
+            directory="../src",
             file="./build/web/Dockerfile",
             platform=ecr_assets.Platform.LINUX_AMD64            
         )
@@ -151,6 +153,11 @@ class EmlabCdkStack(Stack):
             task_definition=task_definition,
             memory_limit_mib=512,        
             public_load_balancer=False            
+        )
+        
+        db_security_group.add_ingress_rule(
+            peer=fargate_service.service.connections.security_groups[0],
+            connection=ec2.Port.tcp(5432)
         )
         
         db.secret.grant_read(fargate_service.task_definition.task_role)
@@ -225,7 +232,7 @@ class EmlabCdkStack(Stack):
  
         # Define the Docker image asset
         lamda_image = ecr_assets.DockerImageAsset(self, "LambdaImage",
-            directory="../../server",
+            directory="../src",
             file="./build/lambda/Dockerfile",
             platform=ecr_assets.Platform.LINUX_AMD64            
         )

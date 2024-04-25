@@ -1,9 +1,0 @@
-{
-    "IsEncrypted": false,
-    "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "python",
-        "EventHubConnectionString": "Endpoint=sb://emlabai.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=S+nfU1GQ0el3+XZ5Ik1qrSx4UoV9MvmE3+AEhD0+Rak=",
-        "EventHubName": "githubevents"
-    }
-}

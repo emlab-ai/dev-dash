@@ -34,7 +34,7 @@ jobs:
 
       - name: Zip folder  
         run: |
-          cd ./server/src
+          cd ./src/server
           zip -r functionapp.zip . -x "*.git*" "*__pycache__*" "*deploy.sh*" ".venv/*"
 
       - name: Upload artifact

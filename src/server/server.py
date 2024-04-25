@@ -17,15 +17,12 @@ from services.githubImportService import GithubImportService
 from services.githubWebhookService import GithubWebhookService
 from services.statsService import StatsService
 from services.userService import UsersService
-import logging
 from datetime import datetime
 import app_config
 import uuid
+from app_logger import logger
 
 from utils import none_if_empty
-
-logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
 
 app = Flask(__name__, static_folder='static')
 app.debug = app_config.DEBUG
@@ -328,11 +325,11 @@ def register_installation_id():
         
         inst = installationRepository.find_one(GithubInstallation.installation_token == installation_token)
         if inst is None:
-            logging.error("Invalid installation token")
+            logger.error("Invalid installation token")
             return redirect('/404')
         
         if inst.installation_id is not None:
-            logging.error("Installation token already used")
+            logger.error("Installation token already used")
             return redirect('/settings/github')
         
         inst.installation_id = installation_id
