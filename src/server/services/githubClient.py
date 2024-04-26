@@ -10,6 +10,7 @@ import app_config
 import requests
 from cachetools import cached, TTLCache
 from utils import log_exceptions
+from datetime import datetime, timedelta
 
 import base64
 
@@ -114,7 +115,7 @@ def get_org_repos(installation_id, org_name, cursor=None):
     query = f"""
     {{
         organization(login: "{org_name}") {{
-            repositories(first: 100{afterFilter}) {{
+            repositories(first: 50{afterFilter}) {{
                 totalCount
                 pageInfo {{
                     hasNextPage
@@ -241,4 +242,132 @@ def get_repo_pull_requests(installation_id, repo_full_name, cursor=None):
       }}
     }}
     """
+    return github_gql_query(query, installation_id)
+
+
+def get_repo_pull_requests2(installation_id, repo_full_name, cursor=None):
+    one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    afterFilter = f', after: "{cursor}"' if cursor else ''
+    query = f"""
+    query {{
+        search(query: "repo:{repo_full_name} type:pr created:>{one_year_ago}", type: ISSUE, first: 50{afterFilter}) {{
+            issueCount
+            pageInfo {{
+                hasNextPage
+                endCursor
+            }}
+            nodes {{
+                ... on PullRequest {{
+                    createdAt
+                    id
+                    number
+                    closedAt
+                    changedFiles
+                    deletions
+                    additions
+                    bodyText
+                    title
+                    url
+                    databaseId  
+                    state
+                    author {{
+                        login
+                        ... on User {{
+                            id
+                            databaseId
+                        }}
+                    }}
+                    commits(first:1) {{
+                        totalCount
+                        nodes {{
+                            commit  {{
+                                committedDate
+                                message
+                            }}
+                        }}
+                    }}
+                    
+                    repository {{
+                        name
+                        url
+                        databaseId
+                    }}
+                    reviewThreads(first: 15) {{
+                        totalCount
+                        nodes {{
+                            isResolved
+                            id
+                            isOutdated
+                            comments(first: 20) {{
+                                nodes {{
+                                    createdAt
+                                    author {{
+                                        login
+                                        ... on User {{
+                                            id
+                                            databaseId
+                                        }}
+                                    }}
+                                    body
+                                    reactions {{
+                                        totalCount
+                                    }}
+                                }}
+                                pageInfo {{
+                                    hasNextPage
+                                    endCursor
+                                }}
+                            }}
+                        }}
+                        pageInfo {{
+                            hasNextPage
+                            endCursor
+                        }}
+                    }}
+                    reviews(first: 10) {{
+                        nodes {{
+                            state
+                            id
+                            databaseId
+                            createdAt
+                            publishedAt
+                            submittedAt
+                            author {{
+                                login
+                                ... on User {{
+                                    id
+                                    databaseId
+                                }}
+                            }}
+                            bodyText
+                        }}
+                        pageInfo {{
+                            hasNextPage
+                            endCursor
+                        }}
+                    }}
+                    comments (first: 20) {{
+                        totalCount
+                        edges {{
+                            node {{
+                                createdAt
+                                author {{
+                                    login
+                                    ... on User {{
+                                        id
+                                        databaseId
+                                    }}
+                                }}
+                                reactions {{
+                                    totalCount
+                                }}
+                                bodyText              
+                                id
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }}
+    }}"""
     return github_gql_query(query, installation_id)

@@ -13,12 +13,12 @@ class User(Base):
     team_id = Column(BigInteger, ForeignKey('teams.id'), nullable=True)
     email = Column(String, nullable=False, unique=True)
     github_user_id = Column(BigInteger, ForeignKey("github_users.id"), nullable=True)
-    tags = Column(String, nullable=True)
-    manager_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    tags = Column(String, nullable=True)    
     level = Column(String, nullable=True)    
     team = relationship('Team')
     github_user = relationship('GithubUser')
-    manager = relationship('GithubUser', lazy=True)
+    manager_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    manager = relationship('User', lazy=True, foreign_keys=[manager_id])
 
     def __init__(self, name, tenant_id, team_id = None, id=None, level = None, email = None, github_user_id = None, manager_id=None, is_manager=False, tags=None):
         self.id = id

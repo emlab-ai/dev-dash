@@ -10,7 +10,7 @@ class Tenant(Base):
     oauth_tenant_id = Column(String, unique=True)
     organization_domain = Column(String)
      # Add a relationship to GithubOrg
-    github_orgs = relationship('GithubOrg')
+    github_orgs = relationship('GithubOrg', back_populates='tenant')
 
 
     def __init__(self, name, oauth_tenant_id, organization_domain = None, id=None):

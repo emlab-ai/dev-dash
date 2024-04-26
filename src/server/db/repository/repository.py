@@ -1,6 +1,6 @@
 import base64
 import json
-from typing import Callable, Generic, List, Type, TypeVar
+from typing import Any, Callable, Generic, List, Type, TypeVar
 from sqlalchemy import ColumnExpressionArgument, and_, or_
 from sqlalchemy.orm import Session, Query, joinedload
 from sqlalchemy.exc import IntegrityError
@@ -87,6 +87,18 @@ class Repository(Generic[T]):
 
         item = query.first()
         return item
+    
+    def contains_intersect(self, tenant_id, ids:List[Any]=[]) -> List[Any]:
+        query = self.session.query(self.model)
+        if (tenant_id):
+            query = query.filter(self.model.tenant_id == tenant_id)
+
+        query = query.filter(self.model.id.in_(ids))
+        query = query.with_entities(self.model.id)
+            
+        result = query.all()
+        
+        return [item.id for item in result]
     
     def find_one(self, *criterion: ColumnExpressionArgument[bool], expand:List[str]=None) -> T:
         query = self.session.query(self.model)

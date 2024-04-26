@@ -7,7 +7,7 @@ class GithubOrg(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
-    tenant = relationship('Tenant', lazy=True)
+    tenant = relationship('Tenant', back_populates='github_orgs', lazy=True)
     name = Column(String(2000))
     node_id = Column(String(128))
     avatar_url = Column(String(2000))
