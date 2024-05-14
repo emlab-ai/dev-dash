@@ -1,4 +1,5 @@
-import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, Avatar, TabPanels, Tabs, Tab, TabList, TabPanel } from "@chakra-ui/react";
+import { ExternalLinkIcon } from "@chakra-ui/icons";
+import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, Avatar, TabPanels, Tabs, Tab, TabList, TabPanel, Link } from "@chakra-ui/react";
 import DateFilterToggle from "@src/components/DateFilterToggle";
 import Pager from "@src/components/Pager";
 import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
@@ -35,6 +36,7 @@ function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawer
             <DrawerHeader>
                 <HStack alignItems="center">
                     <Avatar size="md" name={user?.name} /> <Text>{user?.name}</Text>
+                    <Link href={"https://github.com/"+user?.login} target="_blank"> <ExternalLinkIcon boxSize={4} color="gray.500" /></Link>
                 </HStack>
             </DrawerHeader>
             <DrawerBody overflowY="scroll">

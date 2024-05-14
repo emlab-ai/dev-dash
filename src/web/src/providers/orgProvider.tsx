@@ -1,9 +1,10 @@
 import { useAxiosClient } from '@src/clients/backendClient';
-import { Team, User } from '@src/model';
+import { GithubUser, Team, User } from '@src/model';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 interface OrgDataModel {
     users: User[];
+    gitUsers: GithubUser[];
     teams: Team[];
     managers: User[];
     topManager: User | undefined;
@@ -18,6 +19,7 @@ const levels = {
 
 export const useOrgDataModel = (): OrgDataModel => {
     const [users, setUsers] = useState<User[]>([]);
+    const [gitUsers, setGitUsers] = useState<GithubUser[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [managers, setManagers] = useState<User[]>([]);
     const backendClient = useAxiosClient();
@@ -33,6 +35,18 @@ export const useOrgDataModel = (): OrgDataModel => {
             return data;
         } catch (error) {
             console.error('Error fetching users', error);
+        }
+    }, [backendClient]);
+
+    const fetchGitUsersAsync = useCallback(async () => {
+        try {
+            const response = await backendClient('/api/git/users?page_size=1000');
+            const result = await response.data;
+            const data = result.data;
+            setGitUsers(data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching git users', error);
         }
     }, [backendClient]);
 
@@ -52,10 +66,12 @@ export const useOrgDataModel = (): OrgDataModel => {
     useEffect(() => {
         fetchUsersAsync();
         fetchTeamsAsync();
+        fetchGitUsersAsync();
     }, []);
 
     return {
         users,
+        gitUsers,
         teams,
         managers,
         topManager,

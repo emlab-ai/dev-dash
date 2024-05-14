@@ -12,7 +12,6 @@ export type PullRequest = {
     id:number;
     author:string;
     authorId:number;
-    node_id:string;
     number:number;
     closedAt:Date;
     createdAt: Date;
@@ -25,13 +24,12 @@ export type PullRequest = {
     firstCommitMessage:string;
     firstCommitDate: Date;
     repositoryName:string;
-    repositoryUrl:string;
     reviewThreadsCount:number;
     resolvedCommentsCount:number;
     commentsCount:number;
     reactionsCount:number;
     url:string;
-    author_name:string;
+    authorName:string;
     totalDuration:number;
 };
 
@@ -48,6 +46,7 @@ interface PullRequestsModel {
 }
 
 interface PullRequestsStats {
+    count: number;
     avg_loc: number;
     avg_duration: number;
     avg_files_changed: number;

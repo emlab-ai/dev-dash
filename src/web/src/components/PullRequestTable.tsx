@@ -25,13 +25,13 @@ export default function PullRequestTable({data}:any) {
                         <Tr key={pr.id} borderBottom="1px solid" borderColor="blue.500">
                             <Td pl={0}>
                                 <Tooltip label={pr.author} aria-label="Author" placement="top">
-                                    <Avatar name={pr.author_name} size="sm" />
+                                    <Avatar name={pr.authorName} size="sm" />
                                 </Tooltip>
                             </Td>
                             <Td pl={0}><TableCellDate date={pr.createdAt}/></Td>
                             <Td pl={0}>
                                 <VStack flex={1} spacing={1} align="flex-start">
-                                    <Link href={pr.repositoryUrl+"/pull/"+pr.number} target="_blank" rel="noopener noreferrer" title={pr.title}>
+                                    <Link href={pr.url} target="_blank" rel="noopener noreferrer" title={pr.title}>
                                         <HStack><ExternalLinkIcon mx="1px" />
                                             <Text isTruncated maxW="300px">{pr.title}</Text>
                                         </HStack>

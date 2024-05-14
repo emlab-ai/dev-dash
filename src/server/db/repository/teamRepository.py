@@ -1,5 +1,6 @@
 from db.model.team import Team
-from db.model.pagedResult import PagedResult, process_paged_result
+from db.model.pagedResult import PagedResult
+from db.repository.repository import Repository, process_paged_result
 from sqlalchemy.orm import aliased
 
 # Create the team repository class
@@ -26,13 +27,14 @@ class TeamRepository:
         self.session.delete(team)
         self.session.commit()        
 
-    def list_all(self, limit:int = None, after=None, before=None, order_by:str=None) -> list[Team]:
+    def list_all(self, tenant_id:int, limit:int = None, after=None, before=None, order_by:str=None) -> list[Team]:
         try:
             if before is not None and after is not None:
                 raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
             
             ParentTeam = aliased(Team)
             query = self.session.query(Team, ParentTeam)
+            query = query.filter(Team.tenant_id == tenant_id)
             total_count = query.count()
 
             query = query.outerjoin(ParentTeam, Team.parent_id == ParentTeam.id)

@@ -16,11 +16,10 @@ interface PullRequestReview {
     id:number;
     prUrl: string;
     state: string;
-    createdAt: Date;
-    publishedAt: Date;
+    submittedAt: Date;
     author: string;
     authorId: number;
-    author_name: string;
+    authorName: string;
     body: string;
 }
 
@@ -38,6 +37,7 @@ export const usePullRequestReviewsModel = (id:number, startDate: string, endDate
             } else if (!!after) {
                 pageStr = `&after=${after}`;
             }
+
             const response = await backendClient(`/api/users/${userId}/reviews?start_date=${startDateStr}&end_date=${endDateStr}&page_size=10${pageStr}`);
             const result = await response.data;
 
@@ -128,8 +128,8 @@ const PullRequestReviewsTableImpl = () => {
             <Tbody>
                 {reviews && reviews.map((review:PullRequestReview) => (
                     <Tr key={review.id}> 
-                        <Td><Avatar size="sm" name={review.author_name}/></Td>
-                        <Td><ReviewState date={review.createdAt} state={review.state}/></Td>                        
+                        <Td><Avatar size="sm" name={review.authorName}/></Td>
+                        <Td><ReviewState date={review.submittedAt} state={review.state}/></Td>                        
                         <Td> 
                             <Tooltip label={review.prUrl} aria-label="PR URL" placement="top">
                                 <Link href={review.prUrl} target="_blank" rel="noopener noreferrer">
@@ -158,6 +158,9 @@ const ReviewState = ({date, state}: {date: Date, state: string}) => {
 }
 
 function getRepoNameFromUrl(url: string) {
+    if (!url) {
+        return '';
+    }
     const parts = url.split('/');
     return parts[4];
 }

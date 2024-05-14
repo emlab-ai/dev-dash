@@ -14,7 +14,6 @@ export default function UsersStatsPage() {
     })
     const [currentItem, setCurrentItem] = useState<number | undefined>();
     const hoverColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100");
-    
 
     const onClickOnLine = useCallback((id:number) => {
         navigate(`/usersstats/${id}`);
@@ -55,9 +54,9 @@ export default function UsersStatsPage() {
                         </Thead>
                         <Tbody>
                             { usersStats.map((stat) => 
-                                <Tr key={stat.authorId} onClick={()=>onClickOnLine(stat.authorId)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
+                                <Tr key={stat.id} onClick={()=>onClickOnLine(stat.id)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
                                     <Td><Avatar size="sm" name={stat.user_name}/></Td>
-                                    <Td>{stat.user_name}</Td>
+                                    <Td>{stat.user_name || stat.github_login}</Td>
                                     <Td>{stat.user_team}</Td>
                                     <Td>{stat.count}</Td>
                                     <Td><TableCellDuration hours={stat.avg_duration}/></Td>

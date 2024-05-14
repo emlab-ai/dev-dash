@@ -7,7 +7,7 @@ class User(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)    
     tenant_id = Column(BigInteger, ForeignKey('tenants.id'), nullable=True) #todo: make non nullable
-    tenant = relationship('Tenant')
+    tenant = relationship('Tenant', uselist=False)
     name = Column(String)
     is_manager = Column(Boolean)
     team_id = Column(BigInteger, ForeignKey('teams.id'), nullable=True)
@@ -16,9 +16,9 @@ class User(Base):
     tags = Column(String, nullable=True)    
     level = Column(String, nullable=True)    
     team = relationship('Team')
-    github_user = relationship('GithubUser')
+    github_user = relationship('GithubUser', uselist=False)
     manager_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
-    manager = relationship('User', lazy=True, foreign_keys=[manager_id])
+    manager = relationship('User', lazy=True, remote_side=[id], uselist=False)
 
     def __init__(self, name, tenant_id, team_id = None, id=None, level = None, email = None, github_user_id = None, manager_id=None, is_manager=False, tags=None):
         self.id = id
@@ -43,6 +43,7 @@ class User(Base):
             'githubUserId': self.github_user_id,
             'tags': self.tags,
             'level': self.level,
+            'tenantId': self.tenant_id,
             'tenant': self.tenant.to_dict() if self.tenant else None,
             'team': self.team.to_dict() if self.team else None,
             'manager': self.manager.to_dict() if self.manager else None,
@@ -50,11 +51,22 @@ class User(Base):
         }
         
     def from_dict(data):
+        tenant_id = data.get('tenantId', None)
+        if not tenant_id:
+            tenant = data.get('tenant', None)
+            if tenant:
+                tenant_id = tenant.get('id', None)
+        team_id = data.get('teamId', None)
+        if not team_id:
+            team = data.get('team', None)
+            if team:
+                team_id = team.get('id', None)
+            
         return User(
             id = data.get('id', None),
             name = data.get('name', None),
-            tenant_id = data.get('tenantId', data.get('tenant', {}).get('id', None)),
-            team_id = data.get('teamId', data.get('team', {}).get('id', None)),
+            tenant_id = tenant_id,
+            team_id = team_id,
             email = data.get('email', None),
             github_user_id = data.get('githubUserId', None),
             tags = data.get('tags', None),

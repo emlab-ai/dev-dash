@@ -4,7 +4,6 @@ import logging
 
 from cachetools import TTLCache, cached
 from db.model.githubIssue import GithubIssue
-from azure.eventhub import EventData
 
 from db.model import PullRequest, GithubEvent, GithubRepo, GithubOrg, GithubInstallation, GithubUser,GithubIssueComment, GithubPullRequestReviewComment, GithubPullRequestReview
 from db.repository.repository import Repository
@@ -24,25 +23,13 @@ class GithubWebhookService:
 
     @log_exceptions(log_args = True)
     def record_event(self, event_type, deliveryId, data):
-       
             body = {
                 "data": data,
                 "event_type": event_type,
                 "delivery_id": deliveryId
             }
             
-            data_bytes = json.dumps(body).encode('utf-8')
-
-            # Wrap the data in an EventData object
-            event_data = EventData(body=data_bytes)
-
-            # Adding custom properties (optional)
-            event_data.properties = {
-                "event_type": event_type,
-                "delivery_id": deliveryId              
-            }
-            
-            publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), event_data)      
+            publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), body)      
         
     def process_event(self, event_type, deliveryId, data):
         eventRepo = Repository(GithubEvent, self.session)

@@ -1,11 +1,9 @@
 import json
 import logging
 import base64
-from azure.functions import EventHubEvent
-from typing import List
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .services.githubWebhookService import GithubWebhookService
+from services.githubWebhookService import GithubWebhookService
 import app_config
 from app_sql import get_sql_connection_string
 from app_logger import logger

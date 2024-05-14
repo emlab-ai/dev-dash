@@ -1,5 +1,6 @@
 from db.model import Tenant
-from db.model.pagedResult import PagedResult, process_paged_result
+from db.model.pagedResult import PagedResult
+from db.repository.repository import Repository, process_paged_result
 from sqlalchemy.orm import aliased
 
 class TenantRepository:

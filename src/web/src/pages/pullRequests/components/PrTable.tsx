@@ -31,7 +31,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                         <Heading as="h2" size="sm">{pr.title}</Heading>
                         <Box>
                             <Text size="sm">
-                                <Link href={pr.repositoryUrl + "/pull/" + pr.number} target="_blank" rel="noopener noreferrer" title={pr.title}>
+                                <Link href={pr.url} target="_blank" rel="noopener noreferrer" title={pr.title}>
                                     <ExternalLinkIcon mx="2px" />
                                     #{pr.number}
                                 </Link>&nbsp;

@@ -9,7 +9,7 @@ type User = {
     name: string;
     managerId: string;
     team: string;
-    gitAlias: string;
+    login: string;
     isManager: boolean;
 };
 

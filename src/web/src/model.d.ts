@@ -27,7 +27,17 @@ export interface User {
     level?: string;
     email?: string;
     team?: Team;
+    githubUser?: GithubUser;
     teamId?: number;
+}
+
+export interface GithubUser {
+    id: number;
+    login: string;
+    avatarUrl: string;
+    name    : string;
+    email   : string;
+    tenantId: number;
 }
 
 export interface PagedResult<Data extends object> {

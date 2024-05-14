@@ -15,6 +15,9 @@ import app_config
 from app_logger import logger
 
 def pull_request_response_to_model(tenant, org, node) -> List[PullRequest]:
+    if not hasattr(node.author, "databaseId"):
+        return None
+        
     return PullRequest(
             id = node.databaseId,
             tenant_id = tenant.id,
@@ -76,9 +79,9 @@ class GithubImportService:
         self.send_event("import_users", tenant.id, org.installation_id, {"org_name": org.name})
         self.send_event("import_teams", tenant.id, org.installation_id, {})
         repos_result = get_org_repos(org.installation_id, org.name)
-        repositories = repos_result.data.organization.repositories.nodes
         
         while(True):
+            repositories = repos_result.data.organization.repositories.nodes
             for repo in repositories:
                 githubRepo = GithubRepo(
                     id = repo.databaseId,
@@ -189,11 +192,14 @@ class GithubImportService:
             raise Exception(f"Organization with installation_id {installation_id} not found")
         
         def import_pull_requests(cursor):
-            result = get_repo_pull_requests2(installation_id, full_name)
+            result = get_repo_pull_requests2(installation_id, full_name, cursor)
             ids = [node.databaseId for node in result.data.search.nodes]
             existing_ids = self.prRepository.contains_intersect(tenant.id, ids)
             for node in result.data.search.nodes:
                 pr = pull_request_response_to_model(tenant , orgs[0], node)
+                if not pr: 
+                    continue
+                
                 if not (pr.id in existing_ids):
                     self.session.add(pr)
                     

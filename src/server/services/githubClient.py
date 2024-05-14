@@ -246,7 +246,7 @@ def get_repo_pull_requests(installation_id, repo_full_name, cursor=None):
 
 
 def get_repo_pull_requests2(installation_id, repo_full_name, cursor=None):
-    one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    one_year_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     afterFilter = f', after: "{cursor}"' if cursor else ''
     query = f"""
     query {{

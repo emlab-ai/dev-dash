@@ -6,6 +6,7 @@ import TeamSelect from "@src/components/TeamSelect";
 import UserSelect from "@src/components/UserSelect";
 import { useOrgProviderContext } from "@src/providers/orgProvider";
 import TagsSelect from "@src/components/TagsSelect";
+import GitUserSelect from "@src/components/GitUserSelect";
 
 interface UserEditDrawerProps {
     isOpen: boolean;
@@ -72,13 +73,18 @@ export default function UserEditDrawer({ isOpen, onClose, onDelete, mode, value 
                         </FormControl>
                         <FormControl mt={4}>
                             <FormLabel>Git alias</FormLabel>
-                            <Input type="text" {...register('gitAlias', { required: false })}></Input>
+                            {/* <Input type="text" {...register('gitAlias', { required: false })}></Input> */}
+                            <Controller
+                                name="githubUserId"
+                                control={control}
+                                render={({ field }) => <GitUserSelect placeholder="Select a github alias"  {...field} />}
+                            />
                         </FormControl>
                         <FormControl mt={4}>
                             <FormLabel>Email</FormLabel>
                             <Input type="email"
                                 {...register('email', {
-                                    required: false,//'This field is required',
+                                    required: true,
                                     pattern: {
                                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i,
                                         message: 'Invalid email address'
@@ -95,13 +101,18 @@ export default function UserEditDrawer({ isOpen, onClose, onDelete, mode, value 
                         </FormControl>
                         <FormControl mt={4}>
                             <FormLabel>Level</FormLabel>
-                            <Select placeholder="Select a level" {...register('level', { required: false })}>
-                                {(wathchIsManager ?
-                                    levels.managers :
-                                    levels.ics).map((level) => (
-                                        <option value={level} key={level}>{level}</option>
-                                    ))}
-                            </Select>
+                            <Controller
+                                name="level"
+                                control={control}
+                                render={({ field }) => <Select placeholder="Select a level" {...field}>
+                                    {(wathchIsManager ?
+                                        levels.managers :
+                                        levels.ics).map((level) => (
+                                            <option value={level} key={level}>{level}</option>
+                                        ))}
+                                </Select>}
+                            />
+                            
                         </FormControl>
 
                         <FormControl mt={4}>

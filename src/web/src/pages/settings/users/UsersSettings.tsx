@@ -45,7 +45,7 @@ function UsersSettings() {
 
     const onAddNew = useCallback(()=>{
         setMode("Create");
-        setUser(undefined);
+        setUser({name: ""});
         onOpen();
     }, [onOpen]);
 
@@ -81,7 +81,7 @@ function UsersSettings() {
                             <Td>{user.name}</Td>
                             <Td>{user.manager?.name}</Td>
                             <Td>{user.team?.name}</Td>
-                            <Td>{user.gitAlias}</Td>
+                            <Td>{user.githubUser?.login}</Td>
                             <Td>{user.email}</Td>
                         </Tr>
                         ))}

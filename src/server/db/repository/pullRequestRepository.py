@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import pickle
 
 from sqlalchemy import func, and_, or_, cast, Float
 from db.model import PullRequest
@@ -7,9 +8,12 @@ from db.model.user import User
 from sqlalchemy import func
 import base64
 import json
+from db.model.githubUser import GithubUser
+from db.repository.repository import add_cursor_filter
 
 class PullRequestStats:
-    def __init__(self, avg_loc, avg_duration, avg_files_changed, avg_comments_count):
+    def __init__(self, count, avg_loc, avg_duration, avg_files_changed, avg_comments_count):
+        self.count = count
         self.avg_loc = avg_loc
         self.avg_duration = avg_duration
         self.avg_files_changed = avg_files_changed
@@ -32,41 +36,13 @@ def encode_cursor(id, sort_by: str, sort_by_value) -> str:
     }
     if sort_by:
         cursor[sort_by] = sort_by_value
-    return base64.b64encode(json.dumps(cursor).encode('utf-8')).decode('utf-8')
+        
+    pickled_data = pickle.dumps(cursor)
+    return base64.urlsafe_b64encode(pickled_data).decode('utf-8')
 
 def decode_cursor(cursor: str) -> dict:
-    decoded_string = base64.b64decode(cursor).decode('utf-8')
-    return json.loads(decoded_string)
-
-def add_cursor_filter(query, after:str, before:str, sort_by:list[str], orderAttr, sort_order):
-    if after:
-        after_cursor = decode_cursor(after)
-        afterId = after_cursor['id']
-        afterSortBy = after_cursor[sort_by] if sort_by in after_cursor else None        
-
-        if sort_by:
-            if sort_order == 'asc':
-                query = query.filter(or_((orderAttr > afterSortBy), and_((orderAttr == afterSortBy), (PullRequest.id > afterId))))
-                query = query.order_by(orderAttr.asc(), PullRequest.id.asc())
-            else:
-                query = query.filter(or_((orderAttr < afterSortBy), and_((orderAttr == afterSortBy), (PullRequest.id < afterId))))
-                query = query.order_by(orderAttr.desc(), PullRequest.id.desc())
-        else:
-            query = query.filter(PullRequest.id > afterId)
-            query = query.order_by(PullRequest.id.desc() if sort_order == 'desc' else PullRequest.id.asc())
-
-    elif before:
-        query = query.filter(PullRequest.id < before)
-        query = query.order_by(PullRequest.id.desc())
-    else:
-        if sort_by:
-            query = query.order_by(orderAttr.desc() if sort_order == 'desc' else orderAttr.asc(), 
-                                   PullRequest.id.desc() if sort_order == 'desc' else PullRequest.id.asc())
-        else:
-            query = query.order_by(PullRequest.id.asc())
-
-    return query
-
+    decoded_string = base64.urlsafe_b64decode(cursor)
+    return pickle.loads(decoded_string)
 
 class PullRequestRepository:
     def __init__(self, session):
@@ -81,7 +57,7 @@ class PullRequestRepository:
         git_stats = self.session.query(PullRequest).filter_by(id=id).first()
         return git_stats
 
-    def list_all(self, start_date, end_date, users_ids:list[int] = None, managers_ids:list[int] = None, limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> list[PullRequest]:
+    def list_all(self, tenant_id:int, start_date, end_date, github_users_ids:list[int] = None, limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> list[PullRequest]:
         if before is not None and after is not None:
             raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
         
@@ -99,19 +75,17 @@ class PullRequestRepository:
             orderAttr = getattr(PullRequest, sort_by) 
         
         query = self.session.query(PullRequest)
+        query = query.filter(PullRequest.tenant_id == tenant_id)
         
         query = query.filter(func.date(PullRequest.closed_at) >= start_date.date(), func.date(PullRequest.closed_at) <= end_date.date())
-        query = query.join(User, PullRequest.author_id == User.id)
+        query = query.join(GithubUser, PullRequest.author_id == GithubUser.id)
         
-        if(managers_ids is not None):
-            query = query.filter(User.manager_id.in_(managers_ids) | User.id.in_(managers_ids))
-        
-        if (users_ids is not None):
-            query = query.filter(User.id.in_(users_ids))
+        if (github_users_ids is not None):
+            query = query.filter(GithubUser.id.in_(github_users_ids))
         
         total_count = query.count()
 
-        query = add_cursor_filter(query, after, before, sort_by, orderAttr, sort_order)
+        query = add_cursor_filter(PullRequest, query, after, before, sort_by, orderAttr, sort_order)
         
         if limit:
             query = query.limit(limit+1)
@@ -136,8 +110,7 @@ class PullRequestRepository:
             PullRequest.comments_count,
             PullRequest.url,
             (changesFunc).label('changes'),
-            (totalDurationFunc).label('totalDuration'),
-            User.name.label('author_name'))
+            (totalDurationFunc).label('total_duration'))
         prs = query.all()
         prs = [item._asdict() for item in prs]
         
@@ -159,56 +132,74 @@ class PullRequestRepository:
 
         before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by] if sort_by else None) if before_cursor_item else None
         after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by] if sort_by else None) if after_cursor_item else None
-        
 
         return PagedResult(prs, total_count, before_cursor, after_cursor)
 
-    def get_pr_stats_group_by_user(self, start_date, end_date,  managerIds:list[int]) -> list[PullRequestsUsersStats]:
-        query = self.session.query(PullRequest)
-        query = query.filter(PullRequest.closed_at >= start_date, PullRequest.closed_at <= end_date)
-        query = query.join(User, PullRequest.author_id == User.id)
-        query = query.filter(User.manager_id.in_(managerIds) | User.id.in_(managerIds))
-        query = query.with_entities(PullRequest.author_id, func.count(PullRequest.id).label('count'), 
-                                    func.avg(PullRequest.additions + PullRequest.deletions).label('avg_loc'), 
-                                    func.sum(PullRequest.additions + PullRequest.deletions).label('sum_loc'), 
-                                    func.max(PullRequest.additions + PullRequest.deletions).label('max_loc'), 
-                                    func.avg(PullRequest.closed_at-PullRequest.first_commit_date).label('avg_duration'), 
-                                    func.max(PullRequest.closed_at-PullRequest.first_commit_date).label('max_duration')
+    def get_pr_stats_group_by_user(self, tenant_id:int, start_date, end_date,  github_user_ids:list[int]) -> list[PullRequestsUsersStats]:
+        query = self.session.query(GithubUser)        
+        query = query.outerjoin(PullRequest, 
+                                and_(
+                                PullRequest.author_id == GithubUser.id,
+                                PullRequest.tenant_id == tenant_id, 
+                                PullRequest.closed_at >= start_date, 
+                                PullRequest.closed_at <= end_date))
+        query = query.outerjoin(User, GithubUser.id == User.github_user_id)
+        query = query.filter(GithubUser.tenant_id == tenant_id)
+        
+        if github_user_ids:
+            query = query.filter(GithubUser.id.in_(github_user_ids))
+            
+        query = query.with_entities(
+            GithubUser.login.label('github_login'),
+            GithubUser.id, 
+            User.name.label('user_name'),
+            User.id.label('user_id'),            
+            func.count(PullRequest.id).label('count'), 
+            func.avg(PullRequest.additions + PullRequest.deletions).label('avg_loc'), 
+            func.sum(PullRequest.additions + PullRequest.deletions).label('sum_loc'), 
+            func.max(PullRequest.additions + PullRequest.deletions).label('max_loc'), 
+            func.avg(PullRequest.closed_at-PullRequest.first_commit_date).label('avg_duration'), 
+            func.max(PullRequest.closed_at-PullRequest.first_commit_date).label('max_duration')
                                     )
-        query = query.group_by(PullRequest.author_id)
+        query = query.group_by(GithubUser.login, GithubUser.id, User.name, User.id)
 
         prs_users_stats = query.all()
 
         return [item._asdict() for item in prs_users_stats]
     
-    def get_avg_stats(self, start_date, end_date,  managerIds:list[int]) -> PullRequestStats:
+    def get_avg_stats(self, tenant_id:int, start_date, end_date, github_user_ids:list[int]) -> PullRequestStats:
         query = self.session.query(PullRequest)
+        query = query.filter(PullRequest.tenant_id == tenant_id)
         query = query.filter(PullRequest.closed_at >= start_date, PullRequest.closed_at <= end_date)
-        query = query.join(User, PullRequest.author_id == User.id)
         
-        if managerIds:
-            query = query.filter(User.manager_id.in_(managerIds) | User.id.in_(managerIds))
+        if github_user_ids:
+            query = query.filter(PullRequest.author_id.in_(github_user_ids))
 
-        query = query.with_entities(func.avg(PullRequest.additions + PullRequest.deletions).label('avg_loc'), 
-                                    func.avg(PullRequest.changedFiles).label('avg_files_changed'), 
-                                    func.avg(PullRequest.closed_at-PullRequest.first_commit_date).label('avg_duration'), 
-                                    func.avg(PullRequest.commentsCount).label('avg_comments_count'))
+        query = query.with_entities(
+            func.count(PullRequest.id).label('count'),
+            func.avg(PullRequest.additions + PullRequest.deletions).label('avg_loc'), 
+            func.avg(PullRequest.changed_files).label('avg_files_changed'), 
+            func.avg(PullRequest.closed_at-PullRequest.first_commit_date).label('avg_duration'), 
+            func.avg(PullRequest.comments_count).label('avg_comments_count'))
 
         prs = query.all()
 
         if prs[0].avg_loc is None:
-            return PullRequestStats(0, 0, 0, 0)
+            return PullRequestStats(0, 0, 0, 0, 0)
         
-        return PullRequestStats(round(prs[0].avg_loc, 2), 
-                                round(prs[0].avg_duration.total_seconds() / 3600, 2), 
-                                round(prs[0].avg_files_changed, 2), 
-                                round(prs[0].avg_comments_count, 2))
+        return PullRequestStats(
+            prs[0].count,
+            round(prs[0].avg_loc, 2), 
+            round(prs[0].avg_duration.total_seconds() / 3600, 2), 
+            round(prs[0].avg_files_changed, 2), 
+            round(prs[0].avg_comments_count, 2))
 
-    def get_all_by_user(self, user_id:int, start_date:datetime, end_date:datetime,  limit:int = None, after=None, before=None, order_by:str=None) -> list[PullRequest]:
+    def get_all_by_user(self, tenant_id:int, user_id:int, start_date:datetime, end_date:datetime,  limit:int = None, after=None, before=None, order_by:str=None) -> list[PullRequest]:
         if before is not None and after is not None:
             raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
         
         query = self.session.query(PullRequest)
+        query = query.filter(PullRequest.tenant_id == tenant_id)
         total_count = query.count()
         query = query.filter(PullRequest.closed_at >= start_date, PullRequest.closed_at <= end_date, PullRequest.author_id == user_id)
         
@@ -243,9 +234,10 @@ class PullRequestRepository:
 
         return PagedResult(prs, total_count, before_cursor, after_cursor)
 
-    def get_count_by_date_user(self, user_id:int, start_date:datetime, end_date:datetime):
+    def get_count_by_date_user(self, tenant_id:int, github_user_id:int, start_date:datetime, end_date:datetime):
         query = self.session.query(PullRequest)
-        query = query.filter(PullRequest.closed_at >= start_date, PullRequest.closed_at <= end_date, PullRequest.author_id == user_id)
+        query = query.filter(PullRequest.tenant_id == tenant_id)
+        query = query.filter(PullRequest.closed_at >= start_date, PullRequest.closed_at <= end_date, PullRequest.author_id == github_user_id)
         query = query.with_entities(func.date_trunc('day', PullRequest.closed_at).label('closed_day'), 
                                     func.count(PullRequest.id).label('count')) 
         query = query.group_by(func.date_trunc('day', PullRequest.closed_at))

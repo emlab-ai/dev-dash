@@ -9,9 +9,10 @@ from db.model.user import User
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository, TenantRepository
 from app_auth import validate_token
-from db.model import GithubInstallation
+from db.model import GithubInstallation, GithubUser
 from db.repository.repository import Repository
 from app_sql import setup_sql_engine
+from db.repository.githubUserRepository import GithubUserRepository
 from services.githubClient import setup_github_app
 from services.githubImportService import GithubImportService
 from services.githubWebhookService import GithubWebhookService
@@ -86,8 +87,8 @@ def get_stats():
     
     statsService = StatsService(g.session)
 
-    cues = statsService.build_cues(managerId, start_date, end_date)
-    line_charts = statsService.build_line_charts(managerId, start_date, end_date)
+    cues = statsService.build_cues(g.tenant.id, managerId, start_date, end_date)
+    line_charts = statsService.build_line_charts(g.tenant.id, managerId, start_date, end_date)
     
     return jsonify({
         'lineCharts': line_charts,
@@ -100,7 +101,8 @@ def create_user():
     userRepository = UserRepository(g.session)
 
     data = request.get_json()
-    user_data = User(**data)
+    user_data = User.from_dict(data)
+    user_data.tenant_id = g.tenant.id
     user = userRepository.create(user_data)
     return jsonify(user.to_dict())
 
@@ -110,6 +112,7 @@ def update_user():
 
     data = request.get_json()
     user_data = User.from_dict(data)
+    user_data.tenant_id = g.tenant.id
     user = userRepository.update(user_data)
     user = userRepository.get(user.id, tenant_id=g.tenant.id, expand=["manager", "team"])
     return jsonify(user.to_dict())
@@ -122,7 +125,22 @@ def list_users():
     page = request.args.get('page_size', default=20, type=int)
 
     userRepository = UserRepository(g.session)
-    result = userRepository.list_all(page, after=after, before=before)
+    result = userRepository.list_all(g.tenant.id, page, after=after, before=before)
+    return jsonify({
+        "before": result.before,
+        "after": result.after,
+        "data": result.data,
+        "page_size": page
+    })
+    
+@app.route('/api/git/users', methods=['GET'])
+def get_git_users():
+    after = request.args.get('after')
+    before = request.args.get('before')
+    page = request.args.get('page_size', default=20, type=int)
+
+    userRepository = GithubUserRepository(g.session)
+    result = userRepository.list_all(g.tenant.id, page, after=after, before=before)
     return jsonify({
         "before": result.before,
         "after": result.after,
@@ -139,37 +157,63 @@ def get_git_prs():
     start_date, end_date = _get_request_date_args(request) 
     manager_id = request.args.get('manager_id')
     user_id = request.args.get('user_id')
-    sort_by = request.args.get('s')
-    sort_order = request.args.get('so', default='asc')
+    sort_by = request.args.get('s', default='closed_at')
+    sort_order = request.args.get('so', default='desc')
     
     prRepository = PullRequestRepository(g.session)
     userService = UsersService(g.session)
     
     managers_ids = None
+    github_users_ids = None
     if manager_id is not None:
-        managers_ids = userService.get_manager_chain(manager_id)
+        # todo: find user id for manger_id which is github user id
+        
+        managers_ids = userService.get_manager_chain(g.tenant.id, manager_id)
+        github_users_ids = userService.get_github_user_for_manager_ids(g.tenant.id, managers_ids)
 
     user_ids = None
     if user_id is not None:
         user_id = int(user_id)
         user_ids = [user_id]
+        github_users_ids = user_ids
 
     pageSize = min(int(pageSize), 50) 
     result = prRepository.list_all(
+        tenant_id=g.tenant.id,
         limit=pageSize, 
         start_date=start_date,
         end_date=end_date, 
-        users_ids=user_ids,  
-        managers_ids=managers_ids, 
+        github_users_ids=github_users_ids,  
         after=after, 
         before=before,
         sort_by=sort_by,
         sort_order=sort_order)
+        
+    data = [{ "id": pr["id"], 
+        "author": pr["author"],
+        "authorId": pr["author_id"],
+        "nodeId": pr["node_id"],
+        "number": pr["number"],
+        "closedAt": pr["closed_at"],
+        "createdAt": pr["created_at"],
+        "changedFiles": pr["changed_files"],
+        "deletions": pr["deletions"],
+        "additions": pr["additions"],
+        "body": pr["body"],
+        "title": pr["title"],
+        "commitsCount": pr["commits_count"],
+        "firstCommitMessage": pr["first_commit_message"],
+        "firstCommitDate": pr["first_commit_date"],
+        "reviewThreadsCount": pr["review_threads_count"],
+        "commentsCount": pr["comments_count"],
+        "url": pr["url"],
+        "changes": pr["changes"],
+        "totalDuration": pr["total_duration"] } for pr in result.data]
 
     git_stats = {
         "before": result.before,
         "after": result.after,
-        "data": result.data,
+        "data": data,
         "page_size": pageSize,
         "total_count": result.total_count
     }
@@ -182,14 +226,16 @@ def get_git_prs_stats():
 
     prRepository = PullRequestRepository(g.session)
     userService = UsersService(g.session)
+    managerIds = None
+    github_user_ids = None
     if managerId is not None:
-        managerIds = userService.get_manager_chain(managerId)
-    else:
-        managerIds = None
+        managerIds = userService.get_manager_chain(g.tenant.id, managerId)
+        github_user_ids = userService.get_github_user_for_manager_ids(g.tenant.id, managerIds)
 
-    result = prRepository.get_avg_stats(start_date=start_date, end_date=end_date, managerIds=managerIds)
+    result = prRepository.get_avg_stats(g.tenant.id, start_date=start_date, end_date=end_date, github_user_ids=github_user_ids)
 
     git_stats = {
+        "count": result.count,
         "avg_loc": result.avg_loc,
         "avg_duration": result.avg_duration,
         "avg_files_changed": result.avg_files_changed,
@@ -202,34 +248,37 @@ def get_git_prs_stats():
 def get_users_stats():
     managerId, start_date, end_date = _get_request_scope_args(request)
     
-    userService = UsersService(g.session)
-    managerIds = userService.get_manager_chain(managerId)
+    userService = UsersService(g.session)    
     statsService = StatsService(g.session)
-
-    result = statsService.build_user_stats(managerIds, start_date, end_date)
+    
+    managerIds = None
+    userIds = None
+    if managerId is not None:
+        managerIds = userService.get_manager_chain(g.tenant.id, managerId)
+        userIds = userService.get_github_user_for_manager_ids(g.tenant.id, managerIds)
+        
+    result = statsService.build_user_stats(g.tenant.id, userIds, start_date, end_date)
 
     return jsonify(result)
 
-@app.route('/api/users/<int:id>/stats', methods=['GET'])
-def get_users_details(id:int):
+@app.route('/api/users/<int:gid>/stats', methods=['GET'])
+def get_users_details(gid:int):
     start_date, end_date = _get_request_date_args(request)
     
     userService = UsersService(g.session)
-    result = userService.get_user_details(id, start_date, end_date)
-
+    result = userService.get_user_details(g.tenant.id, gid, start_date, end_date)
 
     return jsonify(result)
 
-@app.route('/api/users/<int:id>/reviews', methods=['GET'])
-def get_users_reviews(id:int):
+@app.route('/api/users/<int:gid>/reviews', methods=['GET'])
+def get_users_reviews(gid:int):
     start_date, end_date = _get_request_date_args(request)
     pageSize = request.args.get('page_size', default=20, type=int)
     after = request.args.get('after')
     before = request.args.get('before')
 
     reviewsRepo = PullRequestReviewRepository(g.session)
-    result = reviewsRepo.list_all(id, start_date, end_date, limit=pageSize, after=after, before=before)
-
+    result = reviewsRepo.list_all(g.tenant.id, gid, start_date, end_date, limit=pageSize, after=after, before=before)
 
     return jsonify({
         "before": result.before,
@@ -246,7 +295,7 @@ def get_teams():
     before = request.args.get('before')
 
     teamsRepo = TeamRepository(g.session)
-    result = teamsRepo.list_all(limit=pageSize, after=after, before=before)
+    result = teamsRepo.list_all(g.tenant.id, limit=pageSize, after=after, before=before)
     
     return jsonify({
         "before": result.before,
@@ -286,8 +335,7 @@ def github_wh_callback():
     githubService = GithubWebhookService(g.session)
     # TODO: vlidate signature
     githubService.record_event(event, deliveryId, data)
-    githubService.process_event(event, deliveryId, data)
-    
+        
     return "", 200
 
 

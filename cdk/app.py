@@ -285,20 +285,24 @@ class EmlabCdkStack(Stack):
                 
         # Grant the Lambda function permissions to read the secret
         db.secret.grant_read(process_github_import_lambda_function.role)
-        github_import_stream.grant_read(process_github_import_lambda_function)
-        
-        db.secret.grant_read(process_github_events_lambda_function.role)
-        github_events_stream.grant_read(process_github_events_lambda_function)
-        
+        github_import_stream.grant_read(process_github_import_lambda_function)            
         # Create a Kinesis event source
-        kinesis_event_source = lambda_event_source.KinesisEventSource(
+        kinesis_import_event_source = lambda_event_source.KinesisEventSource(
             github_import_stream,  # the Kinesis stream
             starting_position=_lambda.StartingPosition.TRIM_HORIZON
         )
+        process_github_import_lambda_function.add_event_source(kinesis_import_event_source)  
+        
+        # Create a Kinesis event source
+        db.secret.grant_read(process_github_events_lambda_function.role)
+        github_events_stream.grant_read(process_github_events_lambda_function)
+        
+        kinesis_events_event_source = lambda_event_source.KinesisEventSource(
+            github_events_stream,  # the Kinesis stream
+            starting_position=_lambda.StartingPosition.TRIM_HORIZON
+        )
+        process_github_events_lambda_function.add_event_source(kinesis_events_event_source)          
 
-        # Add the Kinesis event source to the Lambda function
-        process_github_import_lambda_function.add_event_source(kinesis_event_source)
-     
         CfnOutput(
             self, "LoadBalancerDNS",
             value=fargate_service.load_balancer.load_balancer_dns_name

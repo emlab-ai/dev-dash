@@ -23,6 +23,7 @@ const PullRequestsPage = () => {
                 <ScopeFilter timeFilter={timeFilter} setTimeFilter={setTimeFilter} managerFilter={managerFilter} setManagerFilter={setManagerFilter} />
                 <Box p={8}>
                     <HStack >
+                        <StatsSimple title="Count" value={pullRequestsStats?.count ?? 0}></StatsSimple>
                         <StatsSimple title="Avg: Duration" value={pullRequestsStats?.avg_duration ?? 0}></StatsSimple>
                         <StatsSimple title="Avg: LoC" value={pullRequestsStats?.avg_loc ?? 0}></StatsSimple>
                         <StatsSimple title="Avg: Files Changed" value={pullRequestsStats?.avg_files_changed ?? 0}></StatsSimple>

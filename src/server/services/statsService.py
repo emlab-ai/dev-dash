@@ -1,5 +1,6 @@
 import datetime
 from statistics import quantiles
+from typing import List
 
 from numpy import mean
 from db.repository import PullRequestRepository
@@ -8,39 +9,50 @@ from services.userService import UsersService
 
 percent_difference = lambda a, b: round(((a - b) / b), 2) if b > 0 else 0
 
+
+def duration_to_hours(duration):
+    if duration is None:
+        return 0
+    
+    return round(duration.total_seconds() / 3600, 2)
+
 class StatsService:
     def __init__(self, session):
         self.session = session
     
-    def build_cues(self, managerId:int, start_date:datetime, end_date:datetime):
+    def build_cues(self, tenant_id:int, managerId:int, start_date:datetime, end_date:datetime):
         prRepository = PullRequestRepository(self.session)
         userService = UsersService(self.session)
         
-        managerIds = None
+        user_ids = None
         if managerId is not None:
-            managerIds = userService.get_manager_chain(managerId)
+            manager_ids = userService.get_manager_chain(tenant_id, managerId)
+            user_ids = userService.get_github_user_for_manager_ids(tenant_id, manager_ids)
             
         if managerId is not None:
-            reports = userService.get_all_reports(managerId, directOnly=False)
+            reports = userService.get_all_reports(tenant_id, managerId, directOnly=False)
             total_swes = len(reports)
             total_swes_prev = len(reports)
         else:
-            users_count = userService.get_all_users_count()
-            total_swes = users_count
-            total_swes_prev = users_count
+            total_swes = None
+            total_swes_prev = None
 
         difference = end_date - start_date 
         start_date_prev = start_date - difference 
         end_date_prev = start_date
         
-        result = prRepository.list_all(start_date, end_date, managers_ids=managerIds)
-        result_prev = prRepository.list_all(start_date_prev, end_date_prev, managers_ids=managerIds)
+        result = prRepository.list_all(tenant_id, start_date, end_date, github_users_ids=user_ids)
+        result_prev = prRepository.list_all(tenant_id, start_date_prev, end_date_prev, github_users_ids=user_ids)
 
         result = result.data if result else []
         result_prev = result_prev.data if result_prev else []
 
-        unique_swes = len(set([pr["authorId"] for pr in result]))
-        unique_swes_prev = len(set([pr["authorId"] for pr in result_prev]))
+        unique_swes = len(set([pr["author_id"] for pr in result]))
+        unique_swes_prev = len(set([pr["author_id"] for pr in result_prev]))
+        
+        if not total_swes:
+            total_swes = unique_swes
+            total_swes_prev = unique_swes_prev
 
         diffLess100 = len([pr for pr in result if pr["deletions"]+pr["additions"] <= 100])
         diffLess100_prev = len([pr for pr in result_prev if pr["deletions"]+pr["additions"] <= 100])
@@ -78,46 +90,49 @@ class StatsService:
                 }
             ]
 
-    def build_line_charts(self, managerId:int, start_date:datetime, end_date:datetime):
+    def build_line_charts(self, tenant_id:int, managerId:int, start_date:datetime, end_date:datetime):
         date_range = [(start_date + datetime.timedelta(days=i)).date() for i in range((end_date - start_date).days + 1)]
 
         prRepository = PullRequestRepository(self.session)
         userService = UsersService(self.session)
+        total_swes = None
+        
+        github_user_ids = None
         
         if managerId is not None:
-            managerIds = userService.get_manager_chain(managerId)
-            reports = userService.get_all_reports(managerId, directOnly=False)
+            managerIds = userService.get_manager_chain(tenant_id, managerId)
+            github_user_ids = userService.get_github_user_for_manager_ids(tenant_id, managerIds)
+            reports = userService.get_all_reports(tenant_id, managerId, directOnly=False)
             total_swes = len(reports)      
-        else:
-            users_count = userService.get_all_users_count()
-            total_swes = users_count
-            managerIds = None  
 
-        result = prRepository.list_all(start_date, end_date, managerIds)
+        result = prRepository.list_all(tenant_id, start_date, end_date, github_user_ids)
         result = result.data if result else []
-        unique_swes = len(set([pr["authorId"] for pr in result]))
+        unique_swes = len(set([pr["author_id"] for pr in result]))
+        
+        if not total_swes:
+            total_swes = unique_swes
                     
         grouped_by_date = {}
         less100_grouped_by_date = {}
         active_swe_by_date = {}
         for pr in result:
-            closed_date = pr["closedAt"].date()
+            closed_date = pr["closed_at"].date()
             if closed_date not in grouped_by_date:
                 grouped_by_date[closed_date] = 0
                 less100_grouped_by_date[closed_date] = 0
                 active_swe_by_date[closed_date] = set()
             grouped_by_date[closed_date] += 1   
             less100_grouped_by_date[closed_date] += 1 if pr["deletions"]+pr["additions"] <= 100 else 0
-            active_swe_by_date[closed_date].add(pr["authorId"]) 
+            active_swe_by_date[closed_date].add(pr["author_id"]) 
 
         # Calculate average total_duration_h per day
         average_duration_per_day = {}
         for pr in result:
-            closed_date = pr["closedAt"].date()
+            closed_date = pr["closed_at"].date()
             if closed_date not in average_duration_per_day:
                 average_duration_per_day[closed_date] = []
             
-            average_duration_per_day[closed_date].append(pr["totalDuration"])
+            average_duration_per_day[closed_date].append(pr["total_duration"])
 
         p80_duration_per_day = {}
         for date, durations in average_duration_per_day.items():
@@ -204,27 +219,15 @@ class StatsService:
             }
         ]
     
-    def build_user_stats(self, managerIds, start_date, end_date):
+    def build_user_stats(self, tenant_id:int, github_user_ids:List[int], start_date, end_date):
         prRepository = PullRequestRepository(self.session)
-        userService = UsersService(self.session)
-        reports = userService.get_all_reports(managerIds[0], directOnly=False)
-        
-        users_by_id = {user.id: user for user in reports}
 
-        result = prRepository.get_pr_stats_group_by_user(start_date, end_date, managerIds)
+        result = prRepository.get_pr_stats_group_by_user(tenant_id, start_date, end_date, github_user_ids)
 
-        # Join result with users using users_by_id and add user field to every item in result
         for item in result:
-            item["avg_duration"] = round(item["avg_duration"].total_seconds() / 3600, 2) 
-            item["max_duration"] = round(item["max_duration"].total_seconds() / 3600, 2) 
-            item["avg_loc"] = round(item["avg_loc"], 2) 
-            user_id = item["authorId"]
-            if user_id in users_by_id:
-                user = users_by_id[user_id]
-                item["user_name"] = user.name
-                item["user_team"] = user.team.name
-                item["user_gitAlias"] = user.gitAlias
-            else:
-                item["user"] = None
+            item["avg_duration"] = duration_to_hours(item["avg_duration"])
+            item["max_duration"] = duration_to_hours(item["max_duration"]) 
+            item["avg_loc"] = round(item["avg_loc"], 2) if item["avg_loc"] else 0
+
 
         return result

@@ -53,7 +53,7 @@ export default function PrDrawer({ isOpen, onClose, currentItem }: { isOpen: boo
                 <Box py="4">
                     <FormLabel htmlFor='url'>Title</FormLabel>
                     <ExternalLinkIcon mx="2px" />
-                    <Link href={currentItem?.repositoryUrl + "/pull/" + currentItem?.number} target="_blank" rel="noopener noreferrer">{currentItem?.title}</Link>
+                    <Link href={currentItem?.url} target="_blank" rel="noopener noreferrer">{currentItem?.title}</Link>
                 </Box>
 
                 <Box py="4">

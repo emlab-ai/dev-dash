@@ -5,9 +5,10 @@ import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useAxiosClient } from '@src/clients/backendClient';
 
 type UserStat = {
-    authorId: number;
+    id: number;
     user_name: string;
     user_team: string;
+    github_login: string;
     count: number;
     avg_loc: number;
     sum_loc: number;

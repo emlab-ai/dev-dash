@@ -1,10 +1,11 @@
 import base64
 import json
+import pickle
 from typing import Any, Callable, Generic, List, Type, TypeVar
 from sqlalchemy import ColumnExpressionArgument, and_, or_
 from sqlalchemy.orm import Session, Query, joinedload
 from sqlalchemy.exc import IntegrityError
-from db.model.pagedResult import PagedResult, process_paged_result
+from db.model.pagedResult import PagedResult
 
 T = TypeVar('T')
 
@@ -14,11 +15,13 @@ def encode_cursor(id, sort_by: str, sort_by_value) -> str:
     }
     if sort_by:
         cursor[sort_by] = sort_by_value
-    return base64.b64encode(json.dumps(cursor).encode('utf-8')).decode('utf-8')
+        
+    pickled_data = pickle.dumps(cursor)
+    return base64.urlsafe_b64encode(pickled_data).decode('utf-8')
 
 def decode_cursor(cursor: str) -> dict:
-    decoded_string = base64.b64decode(cursor).decode('utf-8')
-    return json.loads(decoded_string)
+    decoded_string = base64.urlsafe_b64decode(cursor)
+    return pickle.loads(decoded_string)
 
 def apply_joinedload(model, query: Query, expand: List[str]) -> Query:
     if expand:
@@ -44,8 +47,21 @@ def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], 
             query = query.order_by(model.id.desc() if sort_order == 'desc' else model.id.asc())
 
     elif before:
-        query = query.filter(model.id < before)
-        query = query.order_by(model.id.desc())
+        before_cursor = decode_cursor(before)
+        beforeId = before_cursor['id']
+        beforeSortBy = before_cursor[sort_by] if sort_by in before_cursor else None      
+        
+        if sort_by:
+            if sort_order == 'asc':
+                query = query.filter(or_((orderAttr < beforeSortBy), and_((orderAttr == beforeSortBy), (model.id < beforeId))))
+                query = query.order_by(orderAttr.desc(), model.id.desc())
+            else:
+                query = query.filter(or_((orderAttr > beforeSortBy), and_((orderAttr == beforeSortBy), (model.id > beforeId))))
+                query = query.order_by(orderAttr.asc(), model.id.asc())
+
+        else:
+            query = query.filter(model.id < beforeId)
+            query = query.order_by(model.id.asc() if sort_order == 'desc' else model.id.desc())
     else:
         if sort_by:
             query = query.order_by(orderAttr.desc() if sort_order == 'desc' else orderAttr.asc(), 
@@ -54,6 +70,40 @@ def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], 
             query = query.order_by(model.id.asc())
 
     return query
+
+def process_paged_result(result, limit, before, after, sort_by=None):
+    hasMore = False
+    if limit:
+        hasMore = len(result) > limit
+
+    if before:
+        result = list(reversed(result))
+        
+    if hasMore:
+        result = result[:-1]
+        
+    before_cursor_item = None
+    after_cursor_item = None
+    if result:
+        before_cursor_item = result[0] if ((before is not None and hasMore) or after is not None)  else None
+        after_cursor_item = result[-1] if hasMore or before is not None else None
+
+    before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by] if sort_by else None) if before_cursor_item else None
+    after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by] if sort_by else None) if after_cursor_item else None
+
+
+    # if result:
+    #     idx = 0 if before is None else 1
+    #     before_cursor = result[idx]['id'] if ((before is not None and hasMore) or after is not None)  else None
+    #     if before:
+    #         after_cursor = before
+    #     elif (hasMore): 
+    #         after_cursor = result[-1]['id']
+
+
+        
+
+    return result, before_cursor, after_cursor
 
 
 class Repository(Generic[T]):
@@ -120,8 +170,9 @@ class Repository(Generic[T]):
         result = query.all()
         return result
     
-    def count(self, *criterion: ColumnExpressionArgument[bool]) -> int:
+    def count(self, tenant_id:int, *criterion: ColumnExpressionArgument[bool]) -> int:
         query = self.session.query(self.model)
+        query = query.filter(self.model.tenant_id == tenant_id)
         if (criterion):
             query = query.filter(*criterion)
         return query.count()
@@ -139,6 +190,9 @@ class Repository(Generic[T]):
         query = apply_joinedload(self.model, query, expand)
 
         query = add_cursor_filter[T](self.model, query, after, before, sort_by, orderAttr, sort_order)
+        
+        if limit:
+            query = query.limit(limit+1)
             
         result = query.all()
 
