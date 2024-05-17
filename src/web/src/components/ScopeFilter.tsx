@@ -16,11 +16,17 @@ export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, 
     setTimeFilter(newValue);
   }, [setTimeFilter]);
 
-  return <HStack justify="space-between" px="4">
+  return <HStack justify="space-between" px="4" h="52px" mb={8}>
     <Box p={4}>
       <HStack>
         <Text>Timeframe:</Text>
         <DateFilterToggle value={timeFilter} onChange={handleDateChange} size="sm"/>
+      </HStack>
+    </Box>
+    <Box>
+      <HStack>
+        <Text>User:</Text>
+        {/* <UserSelect size="sm" w="200px" value={userFilter} onChange={(e:any) => setUserFilter(e.target.value)}/>         */}
       </HStack>
     </Box>
     <Box>

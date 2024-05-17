@@ -63,17 +63,51 @@ class PullRequestRepository:
         
         totalDurationFunc = cast(func.round(func.extract('epoch', PullRequest.closed_at-PullRequest.first_commit_date) / 3600, 2), Float)
         changesFunc = PullRequest.additions + PullRequest.deletions
-        orderAttr = None
-        if sort_by and not hasattr(PullRequest, sort_by):
-            if sort_by == 'totalDuration':
-                orderAttr = totalDurationFunc
-            elif sort_by == 'changes':
-                orderAttr = changesFunc
-            else:
-                raise ValueError(f"Invalid sort_by field: {sort_by}")
-        elif sort_by:
-            orderAttr = getattr(PullRequest, sort_by) 
         
+        sorting_keys = {
+            "id": {
+                "id":"id",
+                "attr": PullRequest.id
+                },
+            "closed_at": {
+                "id":"closed_at",
+                "attr": PullRequest.closed_at
+            },
+            "totalDuration": {
+                "id":"total_duration",
+                "attr": totalDurationFunc
+                },
+            "changes": {
+                "id":"changes",
+                "attr": changesFunc
+            },
+            "changedFiles":{
+                "id":"changed_files",
+                "attr": PullRequest.changed_files
+            },
+            "reviewThreadsCount":{
+                "id":"review_threads_count",
+                "attr": PullRequest.review_threads_count
+            },
+            "reviewThreadsCount": {
+                "id":"review_threads_count",
+                "attr": PullRequest.review_threads_count
+            },
+            "commentsCount":{
+                "id":"comments_count",
+                "attr": PullRequest.comments_count
+            }
+        }
+        
+        if sort_by and (not sort_by in sorting_keys):
+            raise ValueError(f"Invalid sort_by field: {sort_by}")
+        
+        if sort_by:
+            sorting_data = sorting_keys[sort_by]
+        else: 
+            sorting_data = sorting_keys["id"]
+            
+     
         query = self.session.query(PullRequest)
         query = query.filter(PullRequest.tenant_id == tenant_id)
         
@@ -85,7 +119,7 @@ class PullRequestRepository:
         
         total_count = query.count()
 
-        query = add_cursor_filter(PullRequest, query, after, before, sort_by, orderAttr, sort_order)
+        query = add_cursor_filter(PullRequest, query, after, before, sort_by, sorting_data["attr"], sort_order)
         
         if limit:
             query = query.limit(limit+1)
@@ -129,43 +163,127 @@ class PullRequestRepository:
         if prs:
             before_cursor_item = prs[0] if ((before is not None and hasMore) or after is not None)  else None
             after_cursor_item = prs[-1] if hasMore or before is not None else None
+            
+        sort_by_key = None
+        if sort_by:
+            sort_by_key = sorting_data["id"]
 
-        before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by] if sort_by else None) if before_cursor_item else None
-        after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by] if sort_by else None) if after_cursor_item else None
+        before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by_key] if sort_by_key else None) if before_cursor_item else None
+        after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by_key] if sort_by_key else None) if after_cursor_item else None
 
         return PagedResult(prs, total_count, before_cursor, after_cursor)
 
-    def get_pr_stats_group_by_user(self, tenant_id:int, start_date, end_date,  github_user_ids:list[int]) -> list[PullRequestsUsersStats]:
+    def get_pr_stats_group_by_user(self, tenant_id:int, start_date, end_date,  github_user_ids:list[int], limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> PagedResult[PullRequestsUsersStats]:
+        countFunc = func.coalesce(func.count(PullRequest.id), 0)
+        avgLocFunc = func.avg(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        sumLocFunc = func.sum(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        maxLocFunc = func.max(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        avgDurationFunc = func.avg(func.coalesce(PullRequest.closed_at, func.current_date())-func.coalesce(PullRequest.first_commit_date, func.current_date()))
+        maxDurationFunc = func.max(func.coalesce(PullRequest.closed_at, func.current_date())-func.coalesce(PullRequest.first_commit_date, func.current_date()))
+        
+        sorting_keys = {
+            "id": {
+                "id":"id",
+                "attr": GithubUser.id
+                },
+            "name": {
+                "id":"user_name",
+                "attr": User.name
+            },
+            "count": {
+                "id":"count",
+                "attr": countFunc
+                },
+            "avg_loc": {
+                "id":"avg_loc",
+                "attr": avgLocFunc
+            },
+            "sum_loc":{
+                "id":"sum_loc",
+                "attr": sumLocFunc
+            },
+            "max_loc":{
+                "id":"max_loc",
+                "attr": maxLocFunc
+            },
+            "avg_duration": {
+                "id":"avg_duration",
+                "attr": avgDurationFunc
+            },
+            "max_duration":{
+                "id":"max_duration",
+                "attr": maxDurationFunc
+            }
+        }
+        
+        if sort_by and (not sort_by in sorting_keys):
+            raise ValueError(f"Invalid sort_by field: {sort_by}")
+        
+        if sort_by:
+            sorting_data = sorting_keys[sort_by]
+        else: 
+            sorting_data = sorting_keys["id"]
+        
         query = self.session.query(GithubUser)        
         query = query.outerjoin(PullRequest, 
                                 and_(
-                                PullRequest.author_id == GithubUser.id,
-                                PullRequest.tenant_id == tenant_id, 
-                                PullRequest.closed_at >= start_date, 
-                                PullRequest.closed_at <= end_date))
+                                    PullRequest.author_id == GithubUser.id,
+                                    PullRequest.tenant_id == tenant_id, 
+                                    PullRequest.closed_at >= start_date, 
+                                    PullRequest.closed_at <= end_date))
         query = query.outerjoin(User, GithubUser.id == User.github_user_id)
         query = query.filter(GithubUser.tenant_id == tenant_id)
         
         if github_user_ids:
             query = query.filter(GithubUser.id.in_(github_user_ids))
+                    
+        query = add_cursor_filter(GithubUser, query, after, before, sort_by, sorting_data["attr"], sort_order)    
             
         query = query.with_entities(
             GithubUser.login.label('github_login'),
             GithubUser.id, 
             User.name.label('user_name'),
             User.id.label('user_id'),            
-            func.count(PullRequest.id).label('count'), 
-            func.avg(PullRequest.additions + PullRequest.deletions).label('avg_loc'), 
-            func.sum(PullRequest.additions + PullRequest.deletions).label('sum_loc'), 
-            func.max(PullRequest.additions + PullRequest.deletions).label('max_loc'), 
-            func.avg(PullRequest.closed_at-PullRequest.first_commit_date).label('avg_duration'), 
-            func.max(PullRequest.closed_at-PullRequest.first_commit_date).label('max_duration')
-                                    )
+            countFunc.label('count'), 
+            avgLocFunc.label('avg_loc'), 
+            sumLocFunc.label('sum_loc'), 
+            maxLocFunc.label('max_loc'), 
+            avgDurationFunc.label('avg_duration'), 
+            maxDurationFunc.label('max_duration'))
+        
         query = query.group_by(GithubUser.login, GithubUser.id, User.name, User.id)
+        
+        if limit:   
+            query = query.limit(limit+1)
 
-        prs_users_stats = query.all()
+        prs = query.all()
 
-        return [item._asdict() for item in prs_users_stats]
+        prs = [item._asdict() for item in prs]
+    
+        hasMore = False
+        if limit:
+            hasMore = len(prs) > limit
+            if (hasMore):
+                prs = prs[:-1]
+
+        before_cursor_item = None
+        after_cursor_item = None
+
+        if before:
+            prs = list(reversed(prs))
+
+        if prs:
+            before_cursor_item = prs[0] if ((before is not None and hasMore) or after is not None)  else None
+            after_cursor_item = prs[-1] if hasMore or before is not None else None
+
+        sort_by_key = None
+        if sort_by:
+            sort_by_key = sorting_data["id"]
+
+        before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by_key] if sort_by_key else None) if before_cursor_item else None
+        after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by_key] if sort_by_key else None) if after_cursor_item else None
+
+        return PagedResult(prs, 0, before_cursor, after_cursor)
     
     def get_avg_stats(self, tenant_id:int, start_date, end_date, github_user_ids:list[int]) -> PullRequestStats:
         query = self.session.query(PullRequest)

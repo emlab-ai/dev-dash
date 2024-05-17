@@ -3,6 +3,9 @@ import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
 import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useAxiosClient } from '@src/clients/backendClient';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { PagedResult } from '@src/model';
+import { SortingState } from '@tanstack/react-table';
 
 type UserStat = {
     id: number;
@@ -20,20 +23,20 @@ type UserStat = {
 
 
 interface UsersStatsModel {
-    usersStats: UserStat[];
+    usersStatsQuery: ReturnType<typeof useInfiniteQuery<PagedResult<UserStat>>>;
+    setSorting: (sorting: SortingState) => void;
     timeFilter: string;
     managerFilter?: number;
     setTimeFilter: (timeFilter: string) => void;
     setManagerFilter: (managerFilter?: number) => void;
-    fetchUserStatsAsync: () => Promise<void>;
 }
 
 export const useUsersStatsModel = (): UsersStatsModel => {    
     const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
     const { topManager } = useOrgProviderContext();
     const [managerFilter, setManagerFilter] = useState(topManager?.id);
-    const [usersStats, setUsersStats] = useState<UserStat[]>([]);
     const backendClient = useAxiosClient();
+    const [sorting, setSorting] = useState<SortingState>([]);
 
     useEffect(() => {
         if (topManager && topManager.id) {
@@ -43,35 +46,68 @@ export const useUsersStatsModel = (): UsersStatsModel => {
 
     const {startDate, endDate} = useTimeFilterDates(timeFilter);
 
-    const fetchUserStatsAsync = useCallback(async () => {
+    const fetchUserStatsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<UserStat>> => {
         try {
             let managerFilterStr = '';
             if(managerFilter) {
                 managerFilterStr = `&manager_id=${managerFilter}`;
             }
 
-            const response = await backendClient(`/api/users/stats?start_date=${startDate}&end_date=${endDate}${managerFilterStr}`);
+            let args = '';
+            if (!!pageAfter) {
+                args = `&after=${pageAfter}`;
+            } else if (!!pageBefore) {
+                args = `&before=${pageBefore}`;
+            }
+
+            let sortingArgs = '';
+            if (!!sorting?.length) {
+                sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
+            }
+
+            const response = await backendClient(`/api/users/stats?page_size=${limit??30}&start_date=${startDate}&end_date=${endDate}${args}${managerFilterStr}${sortingArgs}`);
             const result = await response.data;
 
-            setUsersStats(result);
+            if (!result.data?.length) {
+                return {
+                    data: [],
+                    before: null,
+                    after: null,
+                    totalCount: 0
+                };
+            }
+
+            return result;
         } catch (error) {
             console.error('Error fetching stats', error);
         }
+
+        return {
+            data: [],
+            before: null,
+            after: null,
+            totalCount: 0
+        };
     }, [startDate, endDate, managerFilter, backendClient]);
 
-
-    useEffect(() => {
-        fetchUserStatsAsync();
-    }, [managerFilter, timeFilter])
-
+    const usersStatsQuery = useInfiniteQuery<PagedResult<UserStat>>({
+        queryKey: ['userstats', sorting, managerFilter, timeFilter],
+        queryFn: async ({ pageParam }) => {      
+          const fetchedData = await fetchUserStatsAsync(pageParam, undefined, 20, sorting);
+          return fetchedData;
+        },
+        initialPageParam: "",
+        getNextPageParam: (lastPage) => lastPage.after,
+        refetchOnWindowFocus: false,
+      })
 
     return {
         timeFilter,
+        usersStatsQuery,
+        setSorting,
         setTimeFilter,
         managerFilter,
-        setManagerFilter,
-        usersStats,
-        fetchUserStatsAsync        
+        setManagerFilter     
     };
 };
 

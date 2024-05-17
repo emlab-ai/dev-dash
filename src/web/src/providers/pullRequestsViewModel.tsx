@@ -25,7 +25,6 @@ export type PullRequest = {
     firstCommitDate: Date;
     repositoryName:string;
     reviewThreadsCount:number;
-    resolvedCommentsCount:number;
     commentsCount:number;
     reactionsCount:number;
     url:string;

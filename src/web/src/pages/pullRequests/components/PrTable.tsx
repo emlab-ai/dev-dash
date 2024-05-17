@@ -19,16 +19,17 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                 cell: ({ row }: any) => (
                     <Avatar size="sm" name={row.original.author_name} />
                 ),
+                sortable: false
             },
             {
                 header: 'Title',
                 id: 'title',
-                size: 500,
+                size: 800,
                 accessorKey: 'title',
                 cell: ({ row }: any) => {
                     var pr = row.original;
-                    return <VStack width="100%" align="left">
-                        <Heading as="h2" size="sm">{pr.title}</Heading>
+                    return <VStack width="100%" align="left" mt={4} mb={4}>
+                        <Heading as="h2" size="sm" maxH="40px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{pr.title}</Heading>
                         <Box>
                             <Text size="sm">
                                 <Link href={pr.url} target="_blank" rel="noopener noreferrer" title={pr.title}>
@@ -40,6 +41,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                         </Box>
                     </VStack>
                 },
+                sortable: false
             },
             {
                 header: 'LoC',
@@ -68,11 +70,6 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                 header: 'Review threads',
                 id: 'reviewThreadsCount',
                 accessorKey: 'reviewThreadsCount'
-            },
-            {
-                header: 'Resolved comments',
-                id: 'resolvedCommentsCount',
-                accessorKey: 'resolvedCommentsCount'
             },
             {
                 header: 'Comments',

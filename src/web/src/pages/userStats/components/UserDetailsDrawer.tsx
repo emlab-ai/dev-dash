@@ -35,8 +35,8 @@ function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawer
             <DrawerCloseButton />
             <DrawerHeader>
                 <HStack alignItems="center">
-                    <Avatar size="md" name={user?.name} /> <Text>{user?.name}</Text>
-                    <Link href={"https://github.com/"+user?.login} target="_blank"> <ExternalLinkIcon boxSize={4} color="gray.500" /></Link>
+                    <Avatar size="md" name={user?.name} /> <Text>{user?.name }</Text>
+                    <Link href={"https://github.com/"+user?.login} target="_blank"><ExternalLinkIcon boxSize={4} color="gray.500" />&nbsp;{user?.login}</Link>
                 </HStack>
             </DrawerHeader>
             <DrawerBody overflowY="scroll">

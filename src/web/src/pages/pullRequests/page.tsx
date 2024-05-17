@@ -19,7 +19,7 @@ const PullRequestsPage = () => {
 
     return (
         <>
-            <Box display="grid" position="absolute" top={0} bottom={0} left={0} right={0} gridTemplateRows="auto auto 1fr">
+            <Box display="grid" position="absolute" pl={4} pr={4} top={0} bottom={0} left={0} right={0} gridTemplateRows="auto auto 1fr">
                 <ScopeFilter timeFilter={timeFilter} setTimeFilter={setTimeFilter} managerFilter={managerFilter} setManagerFilter={setManagerFilter} />
                 <Box p={8}>
                     <HStack >
