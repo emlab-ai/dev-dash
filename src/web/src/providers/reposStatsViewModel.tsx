@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useAxiosClient } from '@src/clients/backendClient';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { PagedResult } from '@src/model';
 import { SortingState } from '@tanstack/react-table';
-import { useGitStatsContext } from './gitStatsViewModel';
 
-type UserStat = {
+type RepoStat = {
     id: number;
-    user_name: string;
-    user_team: string;
-    github_login: string;
+    name: string;
     count: number;
     avg_loc: number;
     sum_loc: number;
@@ -22,8 +20,8 @@ type UserStat = {
 };
 
 
-interface UsersStatsModel {
-    usersStatsQuery: ReturnType<typeof useInfiniteQuery<PagedResult<UserStat>>>;
+interface ReposStatsModel {
+    reposStatsQuery: ReturnType<typeof useInfiniteQuery<PagedResult<RepoStat>>>;
     setSorting: (sorting: SortingState) => void;
     timeFilter: string;
     managerFilter?: number;
@@ -31,9 +29,10 @@ interface UsersStatsModel {
     setManagerFilter: (managerFilter?: number) => void;
 }
 
-export const useUsersStatsModel = (): UsersStatsModel => {    
-    const {timeFilter, setTimeFilter, managerFilter, setManagerFilter} = useGitStatsContext();
+export const useReposStatsModel = (): ReposStatsModel => {    
+    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
     const { topManager } = useOrgProviderContext();
+    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const backendClient = useAxiosClient();
     const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -44,7 +43,8 @@ export const useUsersStatsModel = (): UsersStatsModel => {
     }, [topManager]);
 
     const {startDate, endDate} = useTimeFilterDates(timeFilter);
-    const fetchUserStatsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<UserStat>> => {
+
+    const fetchReposStatsAsync = useCallback(async (pageAfter: any, pageBefore: any, limit?:number, sorting?:SortingState) : Promise<PagedResult<RepoStat>> => {
         try {
             let managerFilterStr = '';
             if(managerFilter) {
@@ -63,7 +63,7 @@ export const useUsersStatsModel = (): UsersStatsModel => {
                 sortingArgs = `&s=${sorting[0].id}&so=${sorting[0].desc ? 'desc' : 'asc'}`;
             }
 
-            const response = await backendClient(`/api/git/user_stats?page_size=${limit??30}&start_date=${startDate}&end_date=${endDate}${args}${managerFilterStr}${sortingArgs}`);
+            const response = await backendClient(`/api/git/repo_stats?page_size=${limit??30}&start_date=${startDate}&end_date=${endDate}${args}${managerFilterStr}${sortingArgs}`);
             const result = await response.data;
 
             if (!result.data?.length) {
@@ -88,10 +88,10 @@ export const useUsersStatsModel = (): UsersStatsModel => {
         };
     }, [startDate, endDate, managerFilter, backendClient]);
 
-    const usersStatsQuery = useInfiniteQuery<PagedResult<UserStat>>({
-        queryKey: ['userstats', sorting, managerFilter, timeFilter],
+    const reposStatsQuery = useInfiniteQuery<PagedResult<RepoStat>>({
+        queryKey: ['repostats', sorting, managerFilter, timeFilter],
         queryFn: async ({ pageParam }) => {      
-          const fetchedData = await fetchUserStatsAsync(pageParam, undefined, 20, sorting);
+          const fetchedData = await fetchReposStatsAsync(pageParam, undefined, 20, sorting);
           return fetchedData;
         },
         initialPageParam: "",
@@ -101,7 +101,7 @@ export const useUsersStatsModel = (): UsersStatsModel => {
 
     return {
         timeFilter,
-        usersStatsQuery,
+        reposStatsQuery,
         setSorting,
         setTimeFilter,
         managerFilter,
@@ -110,20 +110,23 @@ export const useUsersStatsModel = (): UsersStatsModel => {
 };
 
 
-const UsersStatsContext: React.Context<UsersStatsModel | null> = createContext<UsersStatsModel | null>(null);
+// Create the context
+const ReposStatsContext: React.Context<ReposStatsModel | null> = createContext<ReposStatsModel | null>(null);
 
-export const useUsersStatsContext = (): UsersStatsModel => {
-    const context = useContext(UsersStatsContext);
+// Create a custom hook to access the context
+export const useReposStatsContext = (): ReposStatsModel => {
+    const context = useContext(ReposStatsContext);
     if (!context) {
         throw new Error('useDashboardContext must be used within a DashboardProvider');
     }
     return context;
 };
 
-export const UsersStatsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const model = useUsersStatsModel();
+// Create the provider component
+export const RepoStatsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const model = useReposStatsModel();
 
-    return <UsersStatsContext.Provider value={model}>
+    return <ReposStatsContext.Provider value={model}>
         {children}
-    </UsersStatsContext.Provider>
+    </ReposStatsContext.Provider>
 };

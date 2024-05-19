@@ -231,3 +231,16 @@ class StatsService:
 
 
         return result.to_dict()
+    
+    def build_repo_stats(self, tenant_id:int, github_user_ids:List[int], start_date, end_date, limit=None, after=None, before=None, sort_by=None, sort_order=None):
+        prRepository = PullRequestRepository(self.session)
+
+        result = prRepository.get_pr_stats_group_by_repo(tenant_id, start_date, end_date, github_user_ids, limit, after, before, sort_by, sort_order)
+
+        for item in result.data:
+            item["avg_duration"] = duration_to_hours(item["avg_duration"])
+            item["max_duration"] = duration_to_hours(item["max_duration"]) 
+            item["avg_loc"] = round(item["avg_loc"], 2) if item["avg_loc"] else 0
+
+
+        return result.to_dict()

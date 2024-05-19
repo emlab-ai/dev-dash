@@ -1,13 +1,10 @@
-import { Box, Container, Text, useDisclosure, Avatar, Flex } from "@chakra-ui/react";
-import ScopeFilter from "@src/components/ScopeFilter";
-import { useUsersStatsContext } from "@src/providers/usersStatsViewModel";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { UserDetailsDrawer } from "./components/UserDetailsDrawer";
-import { useParams, useNavigate } from "react-router-dom";
+import { Avatar, Box, Text} from "@chakra-ui/react";
 import { TableCellDuration } from "@src/components/TableCellDuration";
 import { VirtualizedDataTable } from "@src/components/VirtualizedDataTable";
+import { useUsersStatsContext } from "@src/providers/usersStatsViewModel";
+import { useMemo } from "react";
 
-const UserStsatsTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: any) => void }) => {
+export const UserStatsTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: any) => void }) => {
     const { setSorting, usersStatsQuery } = useUsersStatsContext();
     
     const columns = useMemo(
@@ -84,41 +81,3 @@ const UserStsatsTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: any
         </Box>
     );
 };
-
-
-export default function UsersStatsPage() {
-    const navigate = useNavigate();
-    const { isOpen, onOpen, onClose } = useDisclosure({
-        onClose: () => navigate(`/usersstats`)
-    })
-    const [currentItem, setCurrentItem] = useState<number | undefined>();
-
-    const onClickOnLine = useCallback((row:any) => {
-        navigate(`/usersstats/${row.id}`);
-    }, [onOpen, navigate]);
-
-    const { id } = useParams<{ id: string }>();
-
-    useEffect(() => {
-        if(id) {
-            setCurrentItem(parseInt(id, 10));
-            onOpen();
-        } else if (isOpen){
-            onClose();
-        }
-    }, [id]);
-
-    const { managerFilter, setManagerFilter, timeFilter, setTimeFilter } = useUsersStatsContext();
-    return (
-        <>
-            <Flex flexDir="column" w="100%" h="100%" pl={4} pr={4}>
-                <ScopeFilter managerFilter={managerFilter} timeFilter={timeFilter} setTimeFilter={setTimeFilter} setManagerFilter={setManagerFilter }  />
-
-                <Container w="100%" maxW="full" flex={1} position="relative">
-                    <UserStsatsTable onClickOnLine={onClickOnLine} />
-                </Container>
-            </Flex>
-            {<UserDetailsDrawer isOpen={isOpen} onClose={onClose} userId={currentItem} />}
-        </>
-    )
-}

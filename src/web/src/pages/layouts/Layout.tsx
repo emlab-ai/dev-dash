@@ -24,13 +24,9 @@ const listItems: ListItem[] = [
   {
     text: 'GitHub PRs',
     icon: AiFillGithub,
-    link: '/pullrequests'
+    link: '/gitstats'
   },
-  {
-    text: 'Users',
-    icon: AiOutlineUserSwitch,
-    link: '/usersstats'
-  },
+  
   // {
   //   text: 'Teams',
   //   icon: RiTeamFill,

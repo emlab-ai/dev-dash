@@ -7,9 +7,9 @@ from db.model.pagedResult import PagedResult
 from db.model.user import User
 from sqlalchemy import func
 import base64
-import json
 from db.model.githubUser import GithubUser
 from db.repository.repository import add_cursor_filter
+from db.model.githubRepo import GithubRepo
 
 class PullRequestStats:
     def __init__(self, count, avg_loc, avg_duration, avg_files_changed, avg_comments_count):
@@ -107,7 +107,6 @@ class PullRequestRepository:
         else: 
             sorting_data = sorting_keys["id"]
             
-     
         query = self.session.query(PullRequest)
         query = query.filter(PullRequest.tenant_id == tenant_id)
         
@@ -119,7 +118,7 @@ class PullRequestRepository:
         
         total_count = query.count()
 
-        query = add_cursor_filter(PullRequest, query, after, before, sort_by, sorting_data["attr"], sort_order)
+        query = add_cursor_filter(PullRequest, query, after, before, sort_by, sorting_data["attr"], sort_order, group = False)
         
         if limit:
             query = query.limit(limit+1)
@@ -145,6 +144,7 @@ class PullRequestRepository:
             PullRequest.url,
             (changesFunc).label('changes'),
             (totalDurationFunc).label('total_duration'))
+
         prs = query.all()
         prs = [item._asdict() for item in prs]
         
@@ -237,7 +237,7 @@ class PullRequestRepository:
         if github_user_ids:
             query = query.filter(GithubUser.id.in_(github_user_ids))
                     
-        query = add_cursor_filter(GithubUser, query, after, before, sort_by, sorting_data["attr"], sort_order)    
+        query = add_cursor_filter(GithubUser, query, after, before, sort_by, sorting_data["attr"], sort_order, group=True)    
             
         query = query.with_entities(
             GithubUser.login.label('github_login'),
@@ -284,6 +284,116 @@ class PullRequestRepository:
         after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by_key] if sort_by_key else None) if after_cursor_item else None
 
         return PagedResult(prs, 0, before_cursor, after_cursor)
+    
+    def get_pr_stats_group_by_repo(self, tenant_id:int, start_date, end_date,  github_user_ids:list[int], limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> PagedResult[PullRequestsUsersStats]:
+        countFunc = func.coalesce(func.count(PullRequest.id), 0)
+        avgLocFunc = func.avg(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        sumLocFunc = func.sum(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        maxLocFunc = func.max(func.coalesce(PullRequest.additions, 0) + func.coalesce(PullRequest.deletions, 0))
+        avgDurationFunc = func.avg(func.coalesce(PullRequest.closed_at, func.current_date())-func.coalesce(PullRequest.first_commit_date, func.current_date()))
+        maxDurationFunc = func.max(func.coalesce(PullRequest.closed_at, func.current_date())-func.coalesce(PullRequest.first_commit_date, func.current_date()))
+        
+        sorting_keys = {
+            "id": {
+                "id":"id",
+                "attr": GithubRepo.id
+                },
+            "name": {
+                "id":"name",
+                "attr": GithubRepo.name
+            },
+            "count": {
+                "id":"count",
+                "attr": countFunc
+                },
+            "avg_loc": {
+                "id":"avg_loc",
+                "attr": avgLocFunc
+            },
+            "sum_loc":{
+                "id":"sum_loc",
+                "attr": sumLocFunc
+            },
+            "max_loc":{
+                "id":"max_loc",
+                "attr": maxLocFunc
+            },
+            "avg_duration": {
+                "id":"avg_duration",
+                "attr": avgDurationFunc
+            },
+            "max_duration":{
+                "id":"max_duration",
+                "attr": maxDurationFunc
+            }
+        }
+        
+        if sort_by and (not sort_by in sorting_keys):
+            raise ValueError(f"Invalid sort_by field: {sort_by}")
+        
+        if sort_by:
+            sorting_data = sorting_keys[sort_by]
+        else: 
+            sorting_data = sorting_keys["id"]
+        
+        query = self.session.query(GithubRepo)        
+        query = query.outerjoin(PullRequest, 
+                                and_(
+                                    PullRequest.repository_id == GithubRepo.id,
+                                    PullRequest.tenant_id == tenant_id, 
+                                    PullRequest.closed_at >= start_date, 
+                                    PullRequest.closed_at <= end_date))
+        query = query.filter(GithubRepo.tenant_id == tenant_id)
+        
+        if github_user_ids:
+            query = query.filter(PullRequest.author_id.in_(github_user_ids))
+                    
+        query = add_cursor_filter(GithubRepo, query, after, before, sort_by, sorting_data["attr"], sort_order, group=True)    
+            
+        query = query.with_entities(
+            GithubRepo.id,             
+            GithubRepo.name.label('name'),              
+            countFunc.label('count'), 
+            avgLocFunc.label('avg_loc'), 
+            sumLocFunc.label('sum_loc'), 
+            maxLocFunc.label('max_loc'), 
+            avgDurationFunc.label('avg_duration'), 
+            maxDurationFunc.label('max_duration'))
+        
+        query = query.group_by(GithubRepo.id, GithubRepo.name)
+        
+        if limit:   
+            query = query.limit(limit+1)
+
+        prs = query.all()
+
+        prs = [item._asdict() for item in prs]
+    
+        hasMore = False
+        if limit:
+            hasMore = len(prs) > limit
+            if (hasMore):
+                prs = prs[:-1]
+
+        before_cursor_item = None
+        after_cursor_item = None
+
+        if before:
+            prs = list(reversed(prs))
+
+        if prs:
+            before_cursor_item = prs[0] if ((before is not None and hasMore) or after is not None)  else None
+            after_cursor_item = prs[-1] if hasMore or before is not None else None
+
+        sort_by_key = None
+        if sort_by:
+            sort_by_key = sorting_data["id"]
+
+        before_cursor = encode_cursor(before_cursor_item['id'], sort_by, before_cursor_item[sort_by_key] if sort_by_key else None) if before_cursor_item else None
+        after_cursor = encode_cursor(after_cursor_item['id'], sort_by, after_cursor_item[sort_by_key] if sort_by_key else None) if after_cursor_item else None
+
+        return PagedResult(prs, 0, before_cursor, after_cursor)
+    
     
     def get_avg_stats(self, tenant_id:int, start_date, end_date, github_user_ids:list[int]) -> PullRequestStats:
         query = self.session.query(PullRequest)

@@ -244,7 +244,7 @@ def get_git_prs_stats():
 
     return jsonify(git_stats)
 
-@app.route('/api/users/stats', methods=['GET'])
+@app.route('/api/git/user_stats', methods=['GET'])
 def get_users_stats():
     managerId, start_date, end_date = _get_request_scope_args(request)
     
@@ -264,6 +264,29 @@ def get_users_stats():
         userIds = userService.get_github_user_for_manager_ids(g.tenant.id, managerIds)
         
     result = statsService.build_user_stats(g.tenant.id, userIds, start_date, end_date, pageSize, after, before, sort_by, sort_order)
+
+    return jsonify(result)
+
+@app.route('/api/git/repo_stats', methods=['GET'])
+def get_repos_stats():
+    managerId, start_date, end_date = _get_request_scope_args(request)
+    
+    after = request.args.get('after')
+    before = request.args.get('before')
+    pageSize = request.args.get('page_size', default=20, type=int)
+    sort_by = request.args.get('s', default='id')
+    sort_order = request.args.get('so', default='desc')
+    
+    userService = UsersService(g.session)    
+    statsService = StatsService(g.session)
+    
+    managerIds = None
+    userIds = None
+    if managerId is not None:
+        managerIds = userService.get_manager_chain(g.tenant.id, managerId)
+        userIds = userService.get_github_user_for_manager_ids(g.tenant.id, managerIds)
+        
+    result = statsService.build_repo_stats(g.tenant.id, userIds, start_date, end_date, pageSize, after, before, sort_by, sort_order)
 
     return jsonify(result)
 

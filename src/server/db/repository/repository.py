@@ -29,21 +29,23 @@ def apply_joinedload(model, query: Query, expand: List[str]) -> Query:
             query = query.options(joinedload(getattr(model, expandedProp)))
     return query
 
-def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], orderAttr, sort_order):
+def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], orderAttr, sort_order, group:bool=False):
     if after:
         after_cursor = decode_cursor(after)
         afterId = after_cursor['id']
         afterSortBy = after_cursor[sort_by] if sort_by in after_cursor else None        
+        
+        filterFunc = query.having if group else query.filter
 
         if sort_by:
             if sort_order == 'asc':
-                query = query.having(or_((orderAttr > afterSortBy), and_((orderAttr == afterSortBy), (model.id > afterId))))
+                query = filterFunc(or_((orderAttr > afterSortBy), and_((orderAttr == afterSortBy), (model.id > afterId))))
                 query = query.order_by(orderAttr.asc(), model.id.asc())
             else:
-                query = query.having(or_((orderAttr < afterSortBy), and_((orderAttr == afterSortBy), (model.id < afterId))))
+                query = filterFunc(or_((orderAttr < afterSortBy), and_((orderAttr == afterSortBy), (model.id < afterId))))
                 query = query.order_by(orderAttr.desc(), model.id.desc())
         else:
-            query = query.having(model.id > afterId)
+            query = filterFunc(model.id > afterId)
             query = query.order_by(model.id.desc() if sort_order == 'desc' else model.id.asc())
 
     elif before:
@@ -53,14 +55,14 @@ def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], 
         
         if sort_by:
             if sort_order == 'asc':
-                query = query.having(or_((orderAttr < beforeSortBy), and_((orderAttr == beforeSortBy), (model.id < beforeId))))
+                query = filterFunc(or_((orderAttr < beforeSortBy), and_((orderAttr == beforeSortBy), (model.id < beforeId))))
                 query = query.order_by(orderAttr.desc(), model.id.desc())
             else:
-                query = query.having(or_((orderAttr > beforeSortBy), and_((orderAttr == beforeSortBy), (model.id > beforeId))))
+                query = filterFunc(or_((orderAttr > beforeSortBy), and_((orderAttr == beforeSortBy), (model.id > beforeId))))
                 query = query.order_by(orderAttr.asc(), model.id.asc())
 
         else:
-            query = query.having(model.id < beforeId)
+            query = filterFunc(model.id < beforeId)
             query = query.order_by(model.id.asc() if sort_order == 'desc' else model.id.desc())
     else:
         if sort_by:

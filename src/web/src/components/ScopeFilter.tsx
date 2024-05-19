@@ -16,7 +16,7 @@ export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, 
     setTimeFilter(newValue);
   }, [setTimeFilter]);
 
-  return <HStack justify="space-between" px="4" h="52px" mb={8}>
+  return <HStack justify="space-between" px="4" h="42px" mb={3} mt={2}>
     <Box p={4}>
       <HStack>
         <Text>Timeframe:</Text>

@@ -20,7 +20,7 @@ class UserRepository(Repository[User]):
         query = query.options(joinedload(User.manager))
         query = query.options(joinedload(User.team))
             
-        query = add_cursor_filter(User, query, after, before, sort_by, User.id, sort_order)
+        query = add_cursor_filter(User, query, after, before, sort_by, User.id, sort_order, group=False)
         
         if limit:
             query = query.limit(limit+1)

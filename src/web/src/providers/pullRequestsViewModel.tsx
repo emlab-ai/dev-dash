@@ -6,6 +6,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { SortingState } from '@tanstack/react-table';
 import { PagedResult } from '@src/model';
 import { useAxiosClient } from '@src/clients/backendClient';
+import { useGitStatsContext } from './gitStatsViewModel';
 
 
 export type PullRequest = {
@@ -53,9 +54,9 @@ interface PullRequestsStats {
 }
 
 export const usePullRequestsModel = (): PullRequestsModel => {
-    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
+    const {timeFilter, setTimeFilter, managerFilter, setManagerFilter} = useGitStatsContext();
+    
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const [pullRequestsStats, setPullRequestStats] = useState<PullRequestsStats|null>(null);
     const [sorting, setSorting] = useState<SortingState>([]);
     const backendClient = useAxiosClient();
