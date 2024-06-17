@@ -52,9 +52,9 @@ def serve_well_known(path):
 def serve_public(path):
     return send_from_directory('static/dist/', path)
 
-@app.route('/')
-def serve_react_app():
-    return send_from_directory('static/dist', 'index.html')
+@app.route('/health')
+def health_check():
+    return "Healthy", 200
 
 def _get_request_date_args(request) -> tuple[int, datetime, datetime]:
     start_date_str = request.args.get('start_date')
@@ -157,6 +157,7 @@ def get_git_prs():
     start_date, end_date = _get_request_date_args(request) 
     manager_id = request.args.get('manager_id')
     user_id = request.args.get('user_id')
+    repo_id = request.args.get('repo_id')
     sort_by = request.args.get('s', default='closed_at')
     sort_order = request.args.get('so', default='desc')
     
@@ -184,6 +185,7 @@ def get_git_prs():
         start_date=start_date,
         end_date=end_date, 
         github_users_ids=github_users_ids,  
+        github_repo_id=repo_id,
         after=after, 
         before=before,
         sort_by=sort_by,
@@ -446,6 +448,17 @@ def import_installation():
     GithubImportService(g.session).create_import_request(org.tenant, org)
 
     return "", 201
+
+
+# this one must be the last one
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    # If the path starts with 'api', it means the route does not exist in the API section
+    if path.startswith('api'):
+        return jsonify({'error': 'API endpoint not found'}), 404
+    
+    return send_from_directory('static/dist', 'index.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

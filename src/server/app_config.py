@@ -12,15 +12,8 @@ ISSUER = os.getenv('ISSUER')
 DEBUG = os.getenv("DEBUG", False)
 DEBUG_SQL = os.getenv('DEBUG_SQL', False)
 
-# AUTHORITY = "https://login.microsoftonline.com/common"  # For multi-tenant app
-AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 
-REDIRECT_PATH = "/getAToken"  # Used for forming an absolute URL to your redirect URI.
-# The absolute URL must match the redirect URI you set
-
-# You can find more Microsoft Graph API endpoints from Graph Explorer
-# https://developer.microsoft.com/en-us/graph/graph-explorer
-ENDPOINT = 'https://graph.microsoft.com/v1.0/users'  # This resource requires no admin consent
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'dev-emlab.uk.auth0.com')
 
 # You can find the proper permission names from this document
 # https://docs.microsoft.com/en-us/graph/permissions-reference

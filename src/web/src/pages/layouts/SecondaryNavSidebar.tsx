@@ -15,7 +15,7 @@ function SecondaryNavSidebar({ items }: SecondaryNavSidebarProps) {
     const location = useLocation();
     const currentPath = location.pathname;
     return (
-        <HStack spacing={2} p={4} align="flex-start">
+        <HStack spacing={2} p={4} align="flex-start" h="100%">
             <Box minW="180px" as="aside" minH="90vh" borderColor={useColorModeValue('gray.50', 'gray.900')} transition="width 0.25s ease">
                 <Text fontSize="xl" fontWeight="bold">Settings</Text>
                 <List spacing={0} p="0.5" pt={2}>
@@ -24,8 +24,8 @@ function SecondaryNavSidebar({ items }: SecondaryNavSidebarProps) {
                     }
                 </List>
             </Box>
-            <Flex w='full' minH="90vh">
-                <Box w="100%">
+            <Flex w='full' m={0} h="100%">
+                <Box w="100%" position="relative" m={0} h="100%" justifyItems="stretch">
                     <Outlet />
                 </Box>
             </Flex>

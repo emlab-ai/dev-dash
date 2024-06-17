@@ -2,11 +2,12 @@ import { Container, useDisclosure, Flex } from "@chakra-ui/react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { RepoStatsTable } from "./components/RepoStatsTable";
+import { RepoStatsDetailsDrawer } from "./components/RepoStatsDetailsDrawer";
 
 export default function UsersStatsPage() {
     const navigate = useNavigate();
     const { isOpen, onOpen, onClose } = useDisclosure({
-        onClose: () => navigate(`/usersstats`)
+        onClose: () => navigate(`/gitstats/repositories`)
     })
     const [currentItem, setCurrentItem] = useState<number | undefined>();
 
@@ -32,6 +33,7 @@ export default function UsersStatsPage() {
                     <RepoStatsTable onClickOnLine={onClickOnLine} />
                 </Container>
             </Flex>
+            {<RepoStatsDetailsDrawer isOpen={isOpen} onClose={onClose} repoId={currentItem} />}
         </>
     )
 }

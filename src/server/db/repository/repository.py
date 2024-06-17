@@ -30,12 +30,12 @@ def apply_joinedload(model, query: Query, expand: List[str]) -> Query:
     return query
 
 def add_cursor_filter(model:T, query, after:str, before:str, sort_by:list[str], orderAttr, sort_order, group:bool=False):
+    
+    filterFunc = query.having if group else query.filter
     if after:
         after_cursor = decode_cursor(after)
         afterId = after_cursor['id']
-        afterSortBy = after_cursor[sort_by] if sort_by in after_cursor else None        
-        
-        filterFunc = query.having if group else query.filter
+        afterSortBy = after_cursor[sort_by] if sort_by in after_cursor else None                        
 
         if sort_by:
             if sort_order == 'asc':

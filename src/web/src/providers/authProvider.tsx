@@ -1,5 +1,4 @@
-import { useMsal } from '@azure/msal-react';
-import { apiRequest } from '@src/authConfig';
+import { useAuth0 } from '@auth0/auth0-react';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Define the shape of the AuthContext value
@@ -9,28 +8,29 @@ interface AuthContextValue {
 }
 
 const useAuthContextValue = (): AuthContextValue => {
-    const { instance, accounts } = useMsal();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const { getAccessTokenSilently, isAuthenticated } = useAuth0();
     const [token, setToken] = useState('');
 
     useEffect(() => {
-        if (accounts.length > 0) {
-            const request = {
-                ...apiRequest,
-                account: accounts[0] // Assuming the user is logged in, accounts[0] is their account
-            }; 
+        const getToken = async () => {
+          if (isAuthenticated) {
+            try {
+              const accessToken = await getAccessTokenSilently({
 
-            instance.initialize().then(() => {
-                return instance.acquireTokenSilent(request).then((response) => {
-                    setToken(response.accessToken);
-                    setIsAuthenticated(true);
-                })
-        }).catch((error) => {
-                console.error('Error acquiring token', error);
-                // TODO: use Error Context
-            });
-        }
-    }, [accounts]);
+                authorizationParams:{
+                    audience: "https://emlab.ai/api/",
+                    scope: "openid profile email"
+                }
+              });
+              setToken(accessToken);
+            } catch (error) {
+              console.error(error);
+            }
+          }
+        };
+    
+        getToken();
+      }, [isAuthenticated, getAccessTokenSilently]);
 
     return {
         isAuthenticated,

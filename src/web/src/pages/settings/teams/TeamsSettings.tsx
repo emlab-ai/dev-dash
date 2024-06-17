@@ -57,30 +57,32 @@ function TeamsSettings() {
 
     return (
         <>
-        <Box>
+        <Box display="flex" flexDirection="column" position="absolute" m={0} top={0} left={0} right={0} bottom={0} overflow="hidden">
             <Box justifyContent="flex-end" p={4} display="flex">
                 <Button leftIcon={<AddIcon />} colorScheme="teal" onClick={onAddNew}>Add team</Button>
             </Box>
-            <TableContainer>
-                <Table variant='simple'>
-                    <Thead>
-                    <Tr>
-                        <Th>Name</Th>
-                        <Th>Parent Team</Th>
-                    </Tr>
-                    </Thead>
-                    <Tbody>
-                        {teams && teams.map(team=>(
-                            <Tr key={team.id} onClick={()=>onEdit(team)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
-                                <Td>{team.name}</Td>
-                                <Td>{team.parentName}</Td>
-                            </Tr>
-                        ))}
-                   
-                    </Tbody>
-                </Table>                
-            </TableContainer>
-            <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNext} hasPrev={hasPrev}/>
+            <Box flex={1} m={0} overflow="scroll" width="100%" height="100%">
+                <TableContainer >
+                    <Table variant='simple'>
+                        <Thead>
+                        <Tr>
+                            <Th>Name</Th>
+                            <Th>Parent Team</Th>
+                        </Tr>
+                        </Thead>
+                        <Tbody>
+                            {teams && teams.map(team=>(
+                                <Tr key={team.id} onClick={()=>onEdit(team)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
+                                    <Td>{team.name}</Td>
+                                    <Td>{team.parentName}</Td>
+                                </Tr>
+                            ))}
+                    
+                        </Tbody>
+                    </Table>                
+                </TableContainer>
+                <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNext} hasPrev={hasPrev}/>
+            </Box>
         </Box>
         <TeamEditModal isOpen={isOpen} onClose={onComplete} onDelete={onDelete} mode={mode} value={team}/>
         </>

@@ -22,11 +22,11 @@ export default forwardRef(function UserSelect({ excludeId, isManager, ...props }
 
     const onChange = useCallback((value:any) => {
         setSelectedOptions(value);
-        if (props.onChange && value) {
+        if (props.onChange) {
             props.onChange({
                 target: {
                     name: props.name,
-                    value: value.value
+                    value: value?.value
                 }
             });
         }
@@ -41,7 +41,16 @@ export default forwardRef(function UserSelect({ excludeId, isManager, ...props }
 
     return (
         <Box { ...props}>
-            <Select ref={ref} {...selectProps} size={props.size} options={options} />
+            <Select ref={ref} {...selectProps} 
+                size={props.size} 
+                options={options} 
+                chakraStyles={{
+                    menu: (provided) => ({
+                      ...provided,
+                      zIndex: 9999, 
+                    }),
+                  }}
+                />
         </Box>
     )
 })

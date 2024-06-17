@@ -25,7 +25,7 @@ export default function ScopeFilter({ timeFilter, setTimeFilter, managerFilter, 
     </Box>
     <Box>
       <HStack>
-        <Text>User:</Text>
+        {/* <Text>User:</Text> */}
         {/* <UserSelect size="sm" w="200px" value={userFilter} onChange={(e:any) => setUserFilter(e.target.value)}/>         */}
       </HStack>
     </Box>

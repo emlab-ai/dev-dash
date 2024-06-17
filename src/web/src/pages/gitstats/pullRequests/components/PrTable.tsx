@@ -37,7 +37,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                                     #{pr.number}
                                 </Link>&nbsp;
                                 closed {new Date(pr.closedAt).toLocaleDateString()}
-                                &nbsp; created by <NavLink to={`/usersstats/${pr.authorId}`}>@{pr.author}</NavLink> </Text>
+                                &nbsp; created by <NavLink to={`/gitstats/users/${pr.authorId}`}>@{pr.author}</NavLink> </Text>
                         </Box>
                     </VStack>
                 },

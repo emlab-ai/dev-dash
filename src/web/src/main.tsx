@@ -1,16 +1,29 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import { msalConfig } from './authConfig';
-import { PublicClientApplication } from '@azure/msal-browser';
-import { MsalProvider } from '@azure/msal-react';
+import { Auth0Provider } from '@auth0/auth0-react';
 
-const msalInstance = new PublicClientApplication(msalConfig);
+
+let auth0_domain = "emlab.uk.auth0.com";
+let auth0_client_id = "3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq";
+
+if (window.location.hostname === 'localhost') {
+    auth0_domain = "dev-emlab.uk.auth0.com";
+    auth0_client_id = "Z1G5QBaAQWuVS2OtJ9NgCFCpFCtZ8U7Z";
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <MsalProvider instance={msalInstance}>
+        <Auth0Provider
+            domain={auth0_domain}
+            clientId={auth0_client_id}
+            authorizationParams={{
+                redirect_uri: window.location.origin,
+                audience: "https://emlab.ai/api/",
+                scope: "openid profile email"
+            }}
+        >
             <App />
-        </MsalProvider>
+        </Auth0Provider>
     </React.StrictMode>
 )

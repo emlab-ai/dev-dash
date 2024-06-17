@@ -1,11 +1,11 @@
-import { Box, Flex, HStack, Heading, IconButton, List, ListIcon, ListItem, Text,  useColorModeValue, useDisclosure  } from '@chakra-ui/react'
+import { Box, Flex, HStack, Heading, IconButton, List, ListIcon, ListItem, Menu, MenuButton, MenuItem, MenuList, Text,  useColorModeValue, useDisclosure  } from '@chakra-ui/react'
 import { BiMenu } from 'react-icons/bi'
-import { AiOutlineHome, AiOutlineSetting, AiOutlineUserSwitch, AiOutlineUser, AiFillGithub } from 'react-icons/ai'
-import { IoEarthOutline } from 'react-icons/io5'
+import { AiOutlineHome, AiOutlineSetting, AiOutlineUser, AiFillGithub } from 'react-icons/ai'
 
 import { Head, ThemeToggle } from '@components/index'
 import { BrandName } from '@src/constants'
 import { Link, Outlet } from 'react-router-dom'
+import { useAuth0 } from '@auth0/auth0-react'
 
 
 
@@ -26,12 +26,6 @@ const listItems: ListItem[] = [
     icon: AiFillGithub,
     link: '/gitstats'
   },
-  
-  // {
-  //   text: 'Teams',
-  //   icon: RiTeamFill,
-  //   link: '/teams'
-  // },
   {
     text: 'Settings',
     icon: AiOutlineSetting,
@@ -42,7 +36,7 @@ const listItems: ListItem[] = [
 export default function Layout() {
   const { getButtonProps, isOpen } = useDisclosure()
   const buttonProps = getButtonProps()
-
+  const {logout} = useAuth0();
   return (
     <>
         <Head>
@@ -57,8 +51,18 @@ export default function Layout() {
             </HStack>
             <HStack spacing="1">
                 <ThemeToggle />
-                <IconButton variant="ghost" isRound={true} size="lg" aria-label='earth icon' icon={<IoEarthOutline />}/>
-                <IconButton isRound={true} size="lg" aria-label='user icon' icon={<AiOutlineUser />}  />
+                <Menu>
+                  <MenuButton
+                    as={IconButton}
+                    isRound={true}
+                    size="lg"
+                    aria-label='user icon'
+                    icon={<AiOutlineUser />}
+                  />
+                  <MenuList>
+                    <MenuItem onClick={()=>logout()}>Logout</MenuItem>
+                  </MenuList>
+                </Menu>
             </HStack>
         </Flex>
         <HStack align="start" spacing={0}>

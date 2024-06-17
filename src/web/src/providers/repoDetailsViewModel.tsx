@@ -1,0 +1,136 @@
+import { useCallback, useEffect, useState, createContext, useContext } from 'react';
+import { PullRequest } from './pullRequestsViewModel';
+import { useTimeFilterDates } from '@src/utils/timeFunctions';
+import { useSearchStateParams } from '@src/utils/routeHooks';
+import { useAxiosClient } from '@src/clients/backendClient';
+
+type GitRepository = {
+    id: string;
+    name: string;
+    managerId: string;
+    team: string;
+    login: string;
+    isManager: boolean;
+};
+
+type ChartData = {
+    labels: Date[];
+    data: number[];
+}
+
+interface RepoDetailsModel {
+    repo: GitRepository | null;
+    timeFilter: string;
+    repoPrsChart: ChartData | null;
+    setTimeFilter: (timeFilter: string) => void;
+    pullRequests: PullRequest[] | null;
+    nextPullReqestPage: () => void;
+    prevPullReqestPage: () => void;
+    hasNextPullReqestPage: boolean;
+    hasPrevPullReqestPage: boolean;
+    startDate: string;
+    endDate: string;
+}
+
+export const useRepoDetailsModel = (id?:number): RepoDetailsModel => {    
+    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");  
+    const [repo, setRepo] = useState<GitRepository | null>(null);
+    const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+    const [pullRequestsBefore, setPullRequestsBefore] = useState<string|null>(null);
+    const [pullRequestsAfter, setPullRequestsAfter] = useState<string|null>(null);
+    const [repoPrsChart, setRepoPrsChart] = useState<ChartData | null>(null);
+    const {startDate, endDate} = useTimeFilterDates(timeFilter);
+
+    const backendClient = useAxiosClient();
+
+    const fetchRepoDetailsAsync = useCallback(async (id:number, startDateStr: string, endDateStr: string) => {
+        try {
+            const response = await backendClient(`/api/git/repos/${id}/stats?start_date=${startDateStr}&end_date=${endDateStr}`);
+            const result = await response.data;
+
+            setRepo(result.repo);
+            setRepoPrsChart(result.prsCount);
+        } catch (error) {
+            console.error('Error fetching stats', error);
+        }
+    }, []);
+
+    const fetchPullRequestsAsync = useCallback(async (repo_id:number, startDateStr: string, endDateStr: string, before?: string, after?: string) => {
+        try {
+            let pageStr = '';
+            if (!!before) {
+                pageStr = `&before=${before}`;
+            } else if (!!after) {
+                pageStr = `&after=${after}`;
+            }
+            const response = await backendClient(`/api/git/prs?start_date=${startDateStr}&end_date=${endDateStr}&repo_id=${repo_id}&page_size=10${pageStr}`);
+            const result = await response.data;
+
+            setPullRequests(result.data);
+            setPullRequestsBefore(result.before);
+            setPullRequestsAfter(result.after);
+        } catch (error) {
+            console.error('Error fetching stats', error);
+        }
+    }, [backendClient]);
+
+
+    useEffect(() => {
+        if(!id) {
+            return;
+        }
+
+        fetchRepoDetailsAsync(id, startDate, endDate);
+        fetchPullRequestsAsync(id, startDate, endDate);        
+    }, [id, endDate, startDate])
+
+    const nextPullRequestPage = useCallback(async () => {
+        if (!pullRequestsAfter || !id) {
+            return;
+        }
+        fetchPullRequestsAsync(id, startDate, endDate, undefined, pullRequestsAfter);
+    }, [pullRequestsAfter, id, startDate, endDate, fetchPullRequestsAsync]);
+
+    const prevPullRequestPage = useCallback(async () => {
+        if (!pullRequestsBefore || !id) {
+            return;
+        }
+        fetchPullRequestsAsync(id, startDate, endDate, pullRequestsBefore);
+    }, [pullRequestsBefore, id, startDate, endDate,fetchPullRequestsAsync]);
+
+    return {
+        timeFilter,
+        setTimeFilter,
+        repoPrsChart,
+        pullRequests,
+        repo,
+        nextPullReqestPage: nextPullRequestPage,
+        prevPullReqestPage: prevPullRequestPage,
+        hasNextPullReqestPage: !!pullRequestsAfter,
+        hasPrevPullReqestPage: !!pullRequestsBefore,
+        startDate: startDate,
+        endDate: endDate
+    };
+};
+
+
+// Create the context
+const RepoDetailsContext: React.Context<RepoDetailsModel | null> = createContext<RepoDetailsModel | null>(null);
+
+// Create a custom hook to access the context
+export const useRepoDetailsContext = (): RepoDetailsModel => {
+    const context = useContext(RepoDetailsContext);
+    if (!context) {
+        throw new Error('useDashboardContext must be used within a DashboardProvider');
+    }
+    return context;
+};
+
+// Create the provider component
+export const RepoDetailsProvider: React.FC<{ id?:number, children: React.ReactNode }> = ({id, children }) => {
+    const model = useRepoDetailsModel(id);
+
+    return <RepoDetailsContext.Provider value={model}>
+        {children}
+    </RepoDetailsContext.Provider>
+};

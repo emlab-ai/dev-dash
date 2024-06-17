@@ -1,6 +1,6 @@
 import { Container, useDisclosure, Flex } from "@chakra-ui/react";
 import { useCallback, useEffect, useState } from "react";
-import { UserDetailsDrawer } from "./components/UserDetailsDrawer";
+import { UserStatsDetailsDrawer } from "./components/UserStatsDetailsDrawer";
 import { useParams, useNavigate } from "react-router-dom";
 import { UserStatsTable } from "./components/UserStatsTable";
 
@@ -33,7 +33,7 @@ export default function UsersStatsPage() {
                     <UserStatsTable onClickOnLine={onClickOnLine} />
                 </Container>
             </Flex>
-            {<UserDetailsDrawer isOpen={isOpen} onClose={onClose} userId={currentItem} />}
+            {<UserStatsDetailsDrawer isOpen={isOpen} onClose={onClose} userId={currentItem} />}
         </>
     )
 }

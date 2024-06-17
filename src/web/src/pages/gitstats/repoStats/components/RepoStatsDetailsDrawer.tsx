@@ -1,28 +1,27 @@
 import { ExternalLinkIcon } from "@chakra-ui/icons";
-import { Box, Drawer, DrawerBody, Text, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, Avatar, TabPanels, Tabs, Tab, TabList, TabPanel, Link } from "@chakra-ui/react";
+import { Box, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerHeader, DrawerOverlay, HStack, TabPanels, Tabs, Tab, TabList, TabPanel, Link } from "@chakra-ui/react";
 import DateFilterToggle from "@src/components/DateFilterToggle";
 import Pager from "@src/components/Pager";
-import { PullRequestReviewsTable } from "@src/components/PullRequestReviewsTable";
 import PullRequestTable from "@src/components/PullRequestTable";
-import { UserDetailsProvider, useUserDetailsContext } from "@src/providers/userDetailsViewModel";
+import { RepoDetailsProvider, useRepoDetailsContext } from "@src/providers/repoDetailsViewModel";
 import { Bar } from 'react-chartjs-2';
 
-interface UserDetailsDrawerProps {
+interface RepoDetailsDrawerProps {
     isOpen: boolean;
-    userId?: number;
+    repoId?: number;
     onClose: () => void;
 }
 
-export function UserDetailsDrawer({ isOpen, onClose, userId }: UserDetailsDrawerProps) {
+export function RepoStatsDetailsDrawer({ isOpen, onClose, repoId }: RepoDetailsDrawerProps) {
     return (
-        <UserDetailsProvider id={userId}>
-            <UserDetailsDrawerContent isOpen={isOpen} onClose={onClose} userId={userId} />
-        </UserDetailsProvider>
+        <RepoDetailsProvider id={repoId}>
+            <RepoStatsDetailsDrawerContent isOpen={isOpen} onClose={onClose} repoId={repoId} />
+        </RepoDetailsProvider>
     );
 }
 
-function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawerProps) {
-    var { user } = useUserDetailsContext();
+function RepoStatsDetailsDrawerContent({ isOpen, onClose }: RepoDetailsDrawerProps) {
+    var { repo } = useRepoDetailsContext();
 
     return <Drawer
         isOpen={isOpen}
@@ -35,34 +34,26 @@ function UserDetailsDrawerContent({ isOpen, onClose, userId }: UserDetailsDrawer
             <DrawerCloseButton />
             <DrawerHeader>
                 <HStack alignItems="center">
-                    <Avatar size="md" name={user?.name} /> <Text>{user?.name }</Text>
-                    <Link href={"https://github.com/"+user?.login} target="_blank"><ExternalLinkIcon boxSize={4} color="gray.500" />&nbsp;{user?.login}</Link>
+                    <Link href={"https://github.com/"+repo?.name} target="_blank"><ExternalLinkIcon boxSize={4} color="gray.500" />&nbsp;{repo?.name}</Link>
                 </HStack>
             </DrawerHeader>
             <DrawerBody overflowY="scroll">
-                <UserDetailsContent userId={userId} />
+                <RepoStatsDetailsContent />
             </DrawerBody>            
         </DrawerContent>
     </Drawer>
 }
 
-function UserDetailsContent({ userId }: { userId?: number }) {
-    var context = useUserDetailsContext();
+function RepoStatsDetailsContent() {
+    var context = useRepoDetailsContext();
     const chartData = {
-        labels: context.userPrsChart?.labels,
+        labels: context.repoPrsChart?.labels,
         datasets: [
             {
                 label: 'Pull Requests',
-                data: context.userPrsChart?.data,
+                data: context.repoPrsChart?.data,
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-            },
-            {
-                label: 'Reviews',
-                data: context.userReviewsChart?.data,
-                backgroundColor: '#ffc00033',
-                borderColor: '#ffc000',
                 borderWidth: 1,
             }
         ],
@@ -101,15 +92,11 @@ function UserDetailsContent({ userId }: { userId?: number }) {
             <Tabs>
                 <TabList>
                     <Tab>Pull Requests</Tab>
-                    <Tab>Code Reviews</Tab>
                 </TabList>
                 <TabPanels>
                     <TabPanel>
                         <PullRequestTable data={context.pullRequests}></PullRequestTable>
                         <Pager nextPage={context.nextPullReqestPage} prevPage={context.prevPullReqestPage} hasNext={context.hasNextPullReqestPage} hasPrev={context.hasPrevPullReqestPage} />
-                    </TabPanel>
-                    <TabPanel>
-                        <PullRequestReviewsTable userId={userId ?? 0} startDate={context.startDate} endDate={context.endDate} />
                     </TabPanel>
                 </TabPanels>
             </Tabs>

@@ -10,12 +10,16 @@ from db.repository import TenantRepository, UserRepository
 from db.model.user import User
 from db.model.tenant import Tenant
 
+
+API_AUDIENCE = 'https://emlab.ai/api/'
+ALGORITHMS = ["RS256"]
+
 def get_signing_keys(jwks_uri):
     response = requests.get(jwks_uri)
     jwks = response.json()
     return {key["kid"]: key for key in jwks["keys"]}
 
-jwks = get_signing_keys('https://login.microsoftonline.com/common/discovery/keys')
+jwks = get_signing_keys("https://"+app_config.AUTH0_DOMAIN+"/.well-known/jwks.json")
 
 def get_token_auth_header():
     """Obtains the Access Token from the Authorization Header"""
@@ -46,37 +50,24 @@ def validate_token():
     
     key = jwks[header["kid"]]
 
-    decoded_token = jwt.decode(token, key, algorithms=['RS256'], audience=app_config.AUDIENCE, issuer=app_config.ISSUER)
+    decoded_token = jwt.decode(token, 
+                                key, 
+                                algorithms=['RS256'], 
+                                audience=API_AUDIENCE, 
+                                issuer="https://"+app_config.AUTH0_DOMAIN+"/")
 
     if not decoded_token:
         abort(401, description="Invalid or missing token.")
 
-    tid = decoded_token["tid"]
-    upn = decoded_token["upn"]
+    email = decoded_token["emlab.ai/email"]
 
-    g.tid = tid
-    g.upn = upn
-
-    tenantRepository = TenantRepository(g.session)
     userRepository = UserRepository(g.session)
+    user = userRepository.find_one(User.email == email)
 
-    tenant = tenantRepository.get_by_oauth_tenant_id(tid)
-    if not tenant:
-        tenant = Tenant(name="", oauth_tenant_id=tid)
-        tenantRepository.create(tenant)
-
-    g.tenant = tenant
-
-    user = userRepository.find_one(User.email == upn, User.tenant_id == tenant.id)
     if not user:
-        user = User(
-                    email=upn,
-                    tenant_id=tenant.id,
-                    name=decoded_token["name"])
-        userRepository.create(user)
-
+        abort(401, description="User not found.")
         
-
+    g.tenant = user.tenant
     g.user = user
     
     return True

@@ -24,7 +24,8 @@ from aws_cdk import (
     aws_ecr_assets as ecr_assets,
     aws_elasticloadbalancingv2 as elbv2,
     aws_elasticloadbalancingv2_targets as targets,
-    Aws, Stack, Duration, CfnOutput, RemovalPolicy
+    Aws, Stack, Duration, CfnOutput, RemovalPolicy,
+    aws_dynamodb as ddb,
 )
 
 aws_region = "eu-west-2"
@@ -138,7 +139,9 @@ class EmlabCdkStack(Stack):
             image=ecs.ContainerImage.from_docker_image_asset(flask_image),
             logging=ecs.LogDrivers.aws_logs(stream_prefix="WebServer"),
             environment={
-                "DB_SQL_SECRET_ARN": db.secret.secret_arn
+                "DB_SQL_SECRET_ARN": db.secret.secret_arn,
+                "AUTH0_DOMAIN": "emlab.uk.auth0.com",
+                "AUTH0_CLIENTID":"3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq"
             }
         )
         
@@ -301,7 +304,18 @@ class EmlabCdkStack(Stack):
             github_events_stream,  # the Kinesis stream
             starting_position=_lambda.StartingPosition.TRIM_HORIZON
         )
-        process_github_events_lambda_function.add_event_source(kinesis_events_event_source)          
+        process_github_events_lambda_function.add_event_source(kinesis_events_event_source)      
+        
+        
+        dynamodb_usertable = ddb.Table(
+            self, 
+            "emlab_user_profile",
+            partition_key=ddb.Attribute(
+                name="tid", # name of the column, tenant_id+user_id
+                type=ddb.AttributeType.STRING
+            ),
+            removal_policy=RemovalPolicy.DESTROY,  # NOT recommended for production
+        )    
 
         CfnOutput(
             self, "LoadBalancerDNS",

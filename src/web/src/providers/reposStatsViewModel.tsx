@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
-import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useAxiosClient } from '@src/clients/backendClient';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { PagedResult } from '@src/model';
 import { SortingState } from '@tanstack/react-table';
+import { useGitStatsContext } from './gitStatsViewModel';
 
 type RepoStat = {
     id: number;
@@ -23,16 +23,11 @@ type RepoStat = {
 interface ReposStatsModel {
     reposStatsQuery: ReturnType<typeof useInfiniteQuery<PagedResult<RepoStat>>>;
     setSorting: (sorting: SortingState) => void;
-    timeFilter: string;
-    managerFilter?: number;
-    setTimeFilter: (timeFilter: string) => void;
-    setManagerFilter: (managerFilter?: number) => void;
 }
 
 export const useReposStatsModel = (): ReposStatsModel => {    
-    const [timeFilter, setTimeFilter] = useSearchStateParams("timerange", "1month");
+    const {timeFilter, managerFilter, setManagerFilter} = useGitStatsContext();
     const { topManager } = useOrgProviderContext();
-    const [managerFilter, setManagerFilter] = useState(topManager?.id);
     const backendClient = useAxiosClient();
     const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -100,12 +95,8 @@ export const useReposStatsModel = (): ReposStatsModel => {
       })
 
     return {
-        timeFilter,
         reposStatsQuery,
         setSorting,
-        setTimeFilter,
-        managerFilter,
-        setManagerFilter     
     };
 };
 

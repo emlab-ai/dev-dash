@@ -57,7 +57,7 @@ class PullRequestRepository:
         git_stats = self.session.query(PullRequest).filter_by(id=id).first()
         return git_stats
 
-    def list_all(self, tenant_id:int, start_date, end_date, github_users_ids:list[int] = None, limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> list[PullRequest]:
+    def list_all(self, tenant_id:int, start_date, end_date, github_users_ids:list[int] = None, github_repo_id = None, limit:int = None, after=None, before=None, sort_by:str=None, sort_order:str=None) -> list[PullRequest]:
         if before is not None and after is not None:
             raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
         
@@ -109,6 +109,9 @@ class PullRequestRepository:
             
         query = self.session.query(PullRequest)
         query = query.filter(PullRequest.tenant_id == tenant_id)
+        
+        if github_repo_id:
+            query = query.filter(PullRequest.repository_id == github_repo_id)
         
         query = query.filter(func.date(PullRequest.closed_at) >= start_date.date(), func.date(PullRequest.closed_at) <= end_date.date())
         query = query.join(GithubUser, PullRequest.author_id == GithubUser.id)

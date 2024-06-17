@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, createContext, useContext } from 'react';
 import { useOrgProviderContext } from './orgProvider';
 import { useTimeFilterDates } from '@src/utils/timeFunctions';
-import { useSearchStateParams } from '@src/utils/routeHooks';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SortingState } from '@tanstack/react-table';
 import { PagedResult } from '@src/model';

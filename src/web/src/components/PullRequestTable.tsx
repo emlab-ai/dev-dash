@@ -12,7 +12,7 @@ export default function PullRequestTable({data}:any) {
             <Table size="sm" width="100%">
                 <Thead>
                     <Tr>
-                        <Th pl={0}>Autor</Th>
+                        <Th pl={0}>Author</Th>
                         <Th pl={0}>Created</Th>
                         <Th pl={0}><Box flex={1}>Title</Box></Th>
                         <Th pl={0}>Status</Th>

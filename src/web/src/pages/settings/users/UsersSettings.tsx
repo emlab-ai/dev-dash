@@ -58,39 +58,40 @@ function UsersSettings() {
         
     return (
         <>
-        <Box>
-            <Box justifyContent="flex-end" p={4} display="flex">
+        <Box display="flex" flexDirection="column" position="absolute" m={0} top={0} left={0} right={0} bottom={0} overflow="hidden">
+            <Box justifyContent="flex-end" p={4} display="flex" >
                 <Button leftIcon={<AddIcon />} colorScheme="teal" onClick={onAddNew}>Add user</Button>
             </Box>
-            <TableContainer>
-                <Table variant='simple'>
-                    <Thead>
-                        <Tr>
-                            <Th></Th>
-                            <Th>Name</Th>
-                            <Th>Manager</Th>
-                            <Th>Team</Th>
-                            <Th>GitAlias</Th>                            
-                            <Th>Email</Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
-                        {users && users.map((user:User) => (
-                        <Tr key={user.id} onClick={()=>onEdit(user)}  _hover={{ bg: hoverColor, cursor: "pointer" }}>
-                            <Td><Avatar name={user.name} size='sm'/></Td>                            
-                            <Td>{user.name}</Td>
-                            <Td>{user.manager?.name}</Td>
-                            <Td>{user.team?.name}</Td>
-                            <Td>{user.githubUser?.login}</Td>
-                            <Td>{user.email}</Td>
-                        </Tr>
-                        ))}
-                    </Tbody>
-                    
-                </Table>
-            </TableContainer>
-
-            <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNext} hasPrev={hasPrev} />
+            <Box flex={1} m={0} overflow="scroll" width="100%" height="100%">
+                <TableContainer width="100%">
+                    <Table variant='simple' width="100%">
+                        <Thead>
+                            <Tr>
+                                <Th></Th>
+                                <Th>Name</Th>
+                                <Th>Manager</Th>
+                                <Th>Team</Th>
+                                <Th>GitAlias</Th>                            
+                                <Th>Email</Th>
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {users && users.map((user:User) => (
+                            <Tr key={user.id} onClick={()=>onEdit(user)}  _hover={{ bg: hoverColor, cursor: "pointer" }}>
+                                <Td><Avatar name={user.name} size='sm'/></Td>                            
+                                <Td>{user.name}</Td>
+                                <Td>{user.manager?.name}</Td>
+                                <Td>{user.team?.name}</Td>
+                                <Td>{user.githubUser?.login}</Td>
+                                <Td>{user.email}</Td>
+                            </Tr>
+                            ))}
+                        </Tbody>
+                        
+                    </Table>
+                </TableContainer>
+                <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNext} hasPrev={hasPrev} />
+            </Box>
         </Box>
         <UserEditModal isOpen={isOpen} onClose={onComplete} onDelete={onDelete} mode={mode} value={user}/> 
         </>
