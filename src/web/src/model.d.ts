@@ -1,5 +1,3 @@
-import exp from "constants";
-
 export interface Team {
     id?:number;
     name: string;
@@ -8,6 +6,16 @@ export interface Team {
     githubTeamId?: number;
     members?: TeamMember[];
     tags?: string[];
+}
+
+export interface RepositorySettings {
+    id?:number;
+    repositoryId?: string;
+    name?: string;
+    description?: string;
+    disableTracking?: boolean;
+    enableDescriptionReview?: boolean;
+    reviewPrompt?: string;
 }
 
 export interface TeamMember {
@@ -59,4 +67,15 @@ export interface Tenant {
     oauthTenantId: string
     organizationDomain: string
     githubOrgs: GithubOrg[];
+}
+
+export interface GithubRepo {
+    id: number;
+    tenantId: number;
+    orgId: number;
+    nodeId: string;
+    name: string;
+    fullName: string;
+    private: boolean;
+    deleted: boolean;
 }

@@ -6,7 +6,7 @@ import { LineChartData, useDashboardContext } from "@src/providers/dashboardView
 import ScopeFilter from "@src/components/ScopeFilter";
 
 export default function Dashboard() {
-  var { managerFilter, setManagerFilter, timeFilter, setTimeFilter } = useDashboardContext();
+  const { managerFilter, setManagerFilter, timeFilter, setTimeFilter } = useDashboardContext();
   return (
     <Box bg={useColorModeValue('gray.50', 'gray.900')} minH="100vh">
 
@@ -15,7 +15,7 @@ export default function Dashboard() {
       <Tabs>
         <TabList>
           <Tab>Manager metrics</Tab>
-          <Tab>Tribe level metrics</Tab>
+          {/* <Tab>Tribe level metrics</Tab> */}
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -54,7 +54,7 @@ const LineChart = ({ data }: { data: LineChartData }) => {
       data.datasets[i].borderColor = colors[i];       
     }
 
-    let datapoints = data.labels.map((datapoint: string) => new Date(datapoint)); // Convert each datapoint from string to date
+    const datapoints = data.labels.map((datapoint: string) => new Date(datapoint)); // Convert each datapoint from string to date
     data.labels = datapoints;
   }
 
@@ -114,7 +114,7 @@ const LineChart = ({ data }: { data: LineChartData }) => {
 };
 
 const StatsSimpleGrid = () => {
-  var viewModel = useDashboardContext();
+  const viewModel = useDashboardContext();
   const stats = viewModel.stats;
   return (
     <Suspense fallback={<Text>Loading...</Text>}>

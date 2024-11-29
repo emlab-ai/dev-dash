@@ -207,6 +207,8 @@ class Repository(Generic[T]):
     def update(self, item:T)->T:
         self.session.merge(item)
         self.session.commit()
+        item = self.session.query(self.model).get(item.id)
+        self.session.refresh(item)
         return item
 
     def delete(self, item_id:int)->None:

@@ -1,5 +1,5 @@
-import { TableContainer, Table, useColorModeValue, Thead, Tr, Th, Tbody, Td, Box, Button, Avatar, useDisclosure } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
+import { TableContainer, Table, useColorModeValue, Thead, Tr, Th, Tbody, Td, Box, Button, Avatar, useDisclosure, Flex, Input, InputGroup, InputLeftElement } from "@chakra-ui/react";
+import { AddIcon, Search2Icon } from "@chakra-ui/icons";
 import { UsersSettingsProvider, useUsersSettingsContext } from "./UsersSettingsProvider";
 import Pager from "@src/components/Pager";
 import { User } from "@src/model";
@@ -8,11 +8,12 @@ import UserEditModal from "./UserEditModal";
 
 function UsersSettings() {
     const hoverColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100");
-    const {refreshAsync, users, nextPage, prevPage, hasNext, hasPrev, createUserAsync, updateUserAsync, deleteUserAsync} = useUsersSettingsContext();
+    const {userFilter, setUserFilter, refreshAsync, users, nextPage, prevPage, hasNext, hasPrev, createUserAsync, updateUserAsync, deleteUserAsync} = useUsersSettingsContext();
 
     const {isOpen, onOpen, onClose} = useDisclosure();
     const [mode, setMode] = useState<"Create" | "Edit">("Create");
     const [user, setUser] = useState<User | undefined>();
+    
 
     const onComplete = useCallback(async (result: any)=>{
         if(!result) {
@@ -26,7 +27,7 @@ function UsersSettings() {
         }
         await refreshAsync();
         onClose();
-    }, [mode, onClose]);
+    }, [mode, onClose, createUserAsync, updateUserAsync, refreshAsync]);
 
     const onDelete = useCallback(async (result: User)=>{
         if(!result || !result.id) {
@@ -34,14 +35,14 @@ function UsersSettings() {
             return;            
         }
 
-        if (confirm('Are you sure you want to delete this team?') === false) {
+        if (confirm('Are you sure you want to delete the user?') === false) {
             return;            
         }
 
         await deleteUserAsync(result.id);
 
         onClose();
-    }, [onClose]);
+    }, [onClose, deleteUserAsync]);
 
     const onAddNew = useCallback(()=>{
         setMode("Create");
@@ -54,14 +55,17 @@ function UsersSettings() {
         setUser(user);
         onOpen();
     }, [onOpen]);
-
         
     return (
         <>
         <Box display="flex" flexDirection="column" position="absolute" m={0} top={0} left={0} right={0} bottom={0} overflow="hidden">
-            <Box justifyContent="flex-end" p={4} display="flex" >
+            <Flex p={4} justify="space-between" >
+                <InputGroup>
+                    <InputLeftElement pointerEvents="none" children={<Search2Icon color="gray.300" />} />
+                    <Input placeholder="Search" width={"24em"} value={userFilter} onChange={e=>setUserFilter(e.target.value)}/>
+                </InputGroup>
                 <Button leftIcon={<AddIcon />} colorScheme="teal" onClick={onAddNew}>Add user</Button>
-            </Box>
+            </Flex>
             <Box flex={1} m={0} overflow="scroll" width="100%" height="100%">
                 <TableContainer width="100%">
                     <Table variant='simple' width="100%">

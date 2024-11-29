@@ -63,8 +63,6 @@ def get_app_access_token() -> str:
     return token
 
 
-
-@cached(access_token_cache)
 def get_installation_access_token(installation_id:str) -> str: 
     token = get_app_access_token()
 
@@ -83,7 +81,7 @@ def get_installation_access_token(installation_id:str) -> str:
     return access_token
 
 @log_exceptions(log_args=True)
-def github_gql_query(query:str, installation_id:str) -> dict:
+def github_gql_query(query:str, installation_id:str, variables = None) -> dict:
     access_token = get_installation_access_token(installation_id)
 
     headers = {
@@ -93,7 +91,7 @@ def github_gql_query(query:str, installation_id:str) -> dict:
 
     response = requests.post(
         'https://api.github.com/graphql',
-        json={'query': query},
+        json={'query': query, 'variables': variables},
         headers=headers
     )
 
@@ -371,3 +369,24 @@ def get_repo_pull_requests2(installation_id, repo_full_name, cursor=None):
         }}
     }}"""
     return github_gql_query(query, installation_id)
+
+
+def write_pr_comment(installation_id, node_id, body):
+    query= f"""
+    mutation AddComment($subjectId: ID!, $body: String!) {{
+        addComment(input: {{subjectId: $subjectId, body: $body}}) {{
+            commentEdge {{
+                node {{
+                    id
+                }}
+            }}
+        }}
+    }}
+    """
+
+    variables = {
+        "subjectId": node_id,
+        "body": body
+    }
+
+    return github_gql_query(query, installation_id, variables)

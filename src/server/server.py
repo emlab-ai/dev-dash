@@ -4,12 +4,16 @@ from flask import Flask, abort, jsonify, redirect, request, send_from_directory
 from flask import g
 
 from flask_cors import CORS
+from db.model.githubRepo import GithubRepo
+from db.model.repoSettings import RepoSettings
 from db.model.user import User
 
 from db.model.team import Team
 from db.repository import PullRequestRepository, UserRepository, PullRequestReviewRepository, TeamRepository, TenantRepository
 from app_auth import validate_token
 from db.model import GithubInstallation, GithubUser
+from db.repository.githubRepoRepository import GithubRepoRepository
+from db.repository.repoSettingsRepository import RepoSettingsRepository
 from db.repository.repository import Repository
 from app_sql import setup_sql_engine
 from db.repository.githubUserRepository import GithubUserRepository
@@ -106,6 +110,13 @@ def create_user():
     user = userRepository.create(user_data)
     return jsonify(user.to_dict())
 
+@app.route('/api/users/<id>', methods=['DELETE'])
+def delete_user(id:str):
+    userRepository = UserRepository(g.session)
+    userRepository.delete(id) 
+    
+    return '', 204
+
 @app.route('/api/users', methods=['PUT'])
 def update_user():
     userRepository = UserRepository(g.session)
@@ -123,9 +134,10 @@ def list_users():
     after = request.args.get('after')
     before = request.args.get('before')
     page = request.args.get('page_size', default=20, type=int)
+    filter = request.args.get('filter', default=None)
 
     userRepository = UserRepository(g.session)
-    result = userRepository.list_all(g.tenant.id, page, after=after, before=before)
+    result = userRepository.list_all(g.tenant.id, page, after=after, before=before, user_filter=filter)
     return jsonify({
         "before": result.before,
         "after": result.after,
@@ -133,6 +145,7 @@ def list_users():
         "page_size": page
     })
     
+
 @app.route('/api/git/users', methods=['GET'])
 def get_git_users():
     after = request.args.get('after')
@@ -147,6 +160,29 @@ def get_git_users():
         "data": result.data,
         "page_size": page
     })
+
+@app.route('/api/git/repos', methods=['GET'])
+def get_git_repos():
+    after = request.args.get('after')
+    before = request.args.get('before')
+    page = request.args.get('page_size', default=20, type=int)
+    filter = request.args.get('filter', default=None)
+
+    repoRepository = GithubRepoRepository(g.session)
+    result = repoRepository.list_all(g.tenant.id, page, after=after, before=before, name_filter=filter)
+    return jsonify({
+        "before": result.before,
+        "after": result.after,
+        "data": result.data,
+        "page_size": page
+    })
+    
+@app.route('/api/git/repos/<int:gid>', methods=['GET'])
+def get_git_repo_details(gid:int):
+    gitRepoService = Repository(GithubRepo, g.session)
+    result = gitRepoService.get(gid, g.tenant.id)
+
+    return jsonify(result)
 
 @app.route('/api/git/prs', methods=['GET'])
 def get_git_prs():
@@ -448,6 +484,74 @@ def import_installation():
     GithubImportService(g.session).create_import_request(org.tenant, org)
 
     return "", 201
+
+
+@app.route('/api/repoSettings', methods=['GET'])
+def list_repo_settings():
+    after = request.args.get('after')
+    before = request.args.get('before')
+    page = request.args.get('page_size', default=20, type=int)
+    filter = request.args.get('filter', default=None)
+
+    repoSettingsRepository = RepoSettingsRepository(g.session)
+    result = repoSettingsRepository.list_all(g.tenant.id, page, after=after, before=before, name_filter=filter)
+    return jsonify({
+        "before": result.before,
+        "after": result.after,
+        "data": result.data,
+        "page_size": page
+    })
+
+@app.route('/api/repoSettings', methods=['POST'])
+def create_repo_settings():
+    data = request.get_json()
+    
+    repository_id = data.get('repositoryId', None)
+    if repository_id is None:
+        raise ValueError("Repository ID is required")
+    
+    repos = RepoSettings(
+            review_prompt = data.get('reviewPrompt'), 
+            disable_tracking=data.get('disableTracking', False),
+            enable_description_review=data.get('enableDescriptionReview', False),
+            description=data.get('description', None),
+            repository_id = repository_id,
+            tenant_id = g.tenant.id)
+
+    repoSettingsRepository = RepoSettingsRepository(g.session)
+    result = repoSettingsRepository.create(repos) 
+    
+    return jsonify(result.to_dict())
+
+@app.route('/api/repoSettings', methods=['PUT'])
+def update_repo_settings():
+    data = request.get_json()
+    
+    repository_id = data.get('repositoryId', None)
+    if repository_id is None:
+        raise ValueError("Repository ID is required")
+    
+    team = RepoSettings(
+            id=data.get('id'),
+            review_prompt = data.get('reviewPrompt'), 
+            disable_tracking=data.get('disableTracking', False),
+            enable_description_review=data.get('enableDescriptionReview', False),
+            description=data.get('description', None),
+            repository_id = repository_id,
+            tenant_id = g.tenant.id
+    )
+
+    repoSettingsRepository = RepoSettingsRepository(g.session)
+    result = repoSettingsRepository.update(team) 
+    
+    return jsonify(result.to_dict())
+
+@app.route('/api/repoSettings/<id>', methods=['DELETE'])
+def delete_repo_settings(id:str):
+    repoSettingsRepository = RepoSettingsRepository(g.session)
+    repoSettingsRepository.delete(id) 
+    
+    return '', 204
 
 
 # this one must be the last one

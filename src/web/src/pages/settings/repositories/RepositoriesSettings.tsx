@@ -1,17 +1,17 @@
 import { TableContainer, Table, Thead, Tr, Th, Tbody, Td, Box, Button, useDisclosure, useColorModeValue } from "@chakra-ui/react";
 import { AddIcon } from "@chakra-ui/icons";
-import { TeamsSettingsProvider, useTeamsSettingsContext } from "./TeamsSettingsProvider";
+import { RepoSettingsProvider, useRepoSettingsContext } from "./RepositoriessSettingsProvider";
 import Pager from "@src/components/Pager";
-import TeamEditModal from "./TeamEditModal";
 import { useCallback, useState } from "react";
-import { Team } from "@src/model";
+import { RepositorySettings } from "@src/model";
+import RepositoryEditDrawer from "./RepositoryEditDrawer";
 
-function TeamsSettings() {
+function RepositoriesSettings() {
     const hoverColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100");
     const {isOpen, onOpen, onClose} = useDisclosure();
-    const {teams, nextPage, prevPage, hasNext, hasPrev, createTeamAsync, updateTeamAsync, deleteTeamAsync} = useTeamsSettingsContext();
+    const {repoSettings, nextPage, prevPage, hasNext, hasPrev, createRepoSettingsAsync, deleteRepoSettingsAsync, updateRepoSettingsAsync} = useRepoSettingsContext();
     const [mode, setMode] = useState<"Create" | "Edit">("Create");
-    const [team, setTeam] = useState<Team | undefined>();
+    const [repo, setRepo] = useState<RepositorySettings | undefined>();
 
     const onComplete = useCallback(async (result: any)=>{
         if(!result) {
@@ -20,46 +20,46 @@ function TeamsSettings() {
         }
 
         if (mode === "Create") {
-            await createTeamAsync(result);
+            await createRepoSettingsAsync(result);
         } else {
-            await updateTeamAsync(result);
+            await updateRepoSettingsAsync(result);
         }
 
         onClose();
-    }, [mode]);
+    }, [mode, onClose, createRepoSettingsAsync, updateRepoSettingsAsync]);
 
-    const onDelete = useCallback(async (result: Team)=>{
+    const onDelete = useCallback(async (result: RepositorySettings)=>{
         if(!result || !result.id) {
             onClose();
             return;            
         }
 
-        if (confirm('Are you sure you want to delete the team?') === false) {
+        if (confirm('Are you sure you want to delete the repository settings?') === false) {
             return;            
         }
 
-        await deleteTeamAsync(result.id);
+        await deleteRepoSettingsAsync(result.id);
 
         onClose();
-    }, []);
+    }, [deleteRepoSettingsAsync, onClose]);
 
     const onAddNew = useCallback(()=>{
         setMode("Create");
-        setTeam(undefined);
+        setRepo(undefined);
         onOpen();
-    }, []);
+    }, [setMode, setRepo, onOpen]);
 
-    const onEdit = useCallback((team:Team)=>{
+    const onEdit = useCallback((repo:RepositorySettings)=>{
         setMode("Edit");
-        setTeam(team);
+        setRepo(repo);
         onOpen();
-    }, []);
+    }, [setMode, setRepo, onOpen]);
 
     return (
         <>
         <Box display="flex" flexDirection="column" position="absolute" m={0} top={0} left={0} right={0} bottom={0} overflow="hidden">
             <Box justifyContent="flex-end" p={4} display="flex">
-                <Button leftIcon={<AddIcon />} colorScheme="teal" onClick={onAddNew}>Add team</Button>
+                <Button leftIcon={<AddIcon />} colorScheme="teal" onClick={onAddNew}>Add repository settings</Button>
             </Box>
             <Box flex={1} m={0} overflow="scroll" width="100%" height="100%">
                 <TableContainer >
@@ -67,30 +67,27 @@ function TeamsSettings() {
                         <Thead>
                         <Tr>
                             <Th>Name</Th>
-                            <Th>Parent Team</Th>
                         </Tr>
                         </Thead>
                         <Tbody>
-                            {teams && teams.map(team=>(
-                                <Tr key={team.id} onClick={()=>onEdit(team)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
-                                    <Td>{team.name}</Td>
-                                    <Td>{team.parentName}</Td>
+                            {repoSettings && repoSettings.map(repo=>(
+                                <Tr key={repo.id} onClick={()=>onEdit(repo)} _hover={{ bg: hoverColor, cursor: "pointer" }}>
+                                    <Td>{repo.name}</Td>
                                 </Tr>
                             ))}
-                    
                         </Tbody>
                     </Table>                
                 </TableContainer>
                 <Pager nextPage={nextPage} prevPage={prevPage} hasNext={hasNext} hasPrev={hasPrev}/>
             </Box>
         </Box>
-        <TeamEditModal isOpen={isOpen} onClose={onComplete} onDelete={onDelete} mode={mode} value={team}/>
+        <RepositoryEditDrawer isOpen={isOpen} onClose={onComplete} onDelete={onDelete} mode={mode} value={repo}/>
         </>
     );
 }
 
-export default function TeamsSettingsWithData() {
-    return <TeamsSettingsProvider>
-        <TeamsSettings/>
-    </TeamsSettingsProvider>
+export default function RepositorySettingsWithData() {
+    return <RepoSettingsProvider>
+        <RepositoriesSettings/>
+    </RepoSettingsProvider>
 }

@@ -8,7 +8,7 @@ class UserRepository(Repository[User]):
     def __init__(self, session):
         super().__init__(User, session)
 
-    def list_all(self, tenant_id:int, limit=None, after=None, before=None, sort_by:str=None, sort_order:str=None):
+    def list_all(self, tenant_id:int, limit=None, after=None, before=None, sort_by:str=None, sort_order:str=None, user_filter:str=None):
         if before is not None and after is not None:
             raise ValueError("Both 'before' and 'after' cannot be provided at the same time.")
         
@@ -19,6 +19,9 @@ class UserRepository(Repository[User]):
         
         query = query.options(joinedload(User.manager))
         query = query.options(joinedload(User.team))
+        
+        if user_filter:
+            query = query.filter(User.name.ilike(f'%{user_filter}%'))
             
         query = add_cursor_filter(User, query, after, before, sort_by, User.id, sort_order, group=False)
         

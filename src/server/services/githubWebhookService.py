@@ -8,11 +8,14 @@ from db.model.githubIssue import GithubIssue
 from db.model import PullRequest, GithubEvent, GithubRepo, GithubOrg, GithubInstallation, GithubUser,GithubIssueComment, GithubPullRequestReviewComment, GithubPullRequestReview
 from db.repository.repository import Repository
 from events.producer import publish_to_kinesis
+from db.model.repoSettings import RepoSettings
+from services.aiAgentService import AiAgentService
 from services.githubImportService import GithubImportService
 from utils import log_exceptions
 from services.event_helpers import issue_comment_to_model, issue_to_model, pull_request_event_to_model, pull_request_review_comment_to_model, pull_request_review_to_model, repository_to_model
 from services.githubClient import github_gql_query
 import app_config
+from app_logger import logger
 
 tenant_cache = TTLCache(maxsize=10000, ttl=300000)
 
@@ -155,6 +158,8 @@ class GithubWebhookService:
             repoRepository.update(repo)
 
     def process_pull_request(self, data):
+        logger.info(f"Processing pull request event")
+        
         action = data["action"]
         pull_request = data["pull_request"]
         installation_id = data["installation"]["id"]
@@ -190,16 +195,53 @@ class GithubWebhookService:
             firstCommitDate = commit.committedDate
             firstCommitMessage = commit.message
 
-        if not (action == "closed" or action == "opened"):
-            return
+        # if not (action == "closed" or action == "opened"):
+        #     return        
 
         tenant = self._get_tenant_for_installation(installation_id)
         prRecord = pull_request_event_to_model(tenant, data)
+        logger.info(f"Processing pull request {prRecord.url}")
+        
         prRecord.first_commit_date = firstCommitDate
         prRecord.first_commit_message = firstCommitMessage
-
+        
+        settinsRepo = Repository(RepoSettings, self.session)
         prRepo = Repository(PullRequest, self.session)
+        orgRepo = Repository(GithubOrg, self.session)
+        repoRepo = Repository(GithubRepo, self.session)
+        repo = repoRepo.get(prRecord.repository_id, tenant.id)
+        if repo is None:
+            logger.info(f"Repository not found for tenant {tenant.id} and repository {prRecord.repository_id}")
+            # TODO: import unknown repository 
+            return
+        
+        logger.info(f"Requset settings for tenant {tenant.id} and repository {prRecord.repository_id}")
+        settings = settinsRepo.find_one(RepoSettings.repository_id == prRecord.repository_id and RepoSettings.tenant_id == tenant.id)
+        if settings:
+            logger.info(f"Settings found for tenant {tenant.id} and repository {prRecord.repository_id}")
+            
+        if settings and settings.disable_tracking and not settings.enable_description_review:
+            logger.info(f"Tracking disabled for tenant {tenant.id} and repository {prRecord.repository_id}")
+            return
+        
+        org = orgRepo.get(prRecord.org_id, tenant.id)
+        if org is None:
+            return
+        
+        oldPr = prRepo.get(prRecord.id, tenant.id)
+        
         prRepo.upsert(prRecord)
+        
+        if settings and settings.review_prompt:
+            if oldPr and oldPr.title == prRecord.title and oldPr.body == prRecord.body:
+                logger.info(f"PR title and body did not change for tenant {tenant.id} and repository {prRecord.repository_id}")
+                return
+            logger.info(f"Creating PR review request for tenant {tenant.id} and repository {prRecord.repository_id}")
+            aiAgetService = AiAgentService(self.session)
+            aiAgetService.create_pr_review_request(tenant, org, prRecord.id)
+        
+        if not (action == "opened"):
+            return
 
     def process_pull_request_review_comment(self, data):
         installationId = data["installation"]["id"]

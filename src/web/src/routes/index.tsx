@@ -9,6 +9,7 @@ import { DashboardProvider } from '@src/providers/dashboardViewModel'
 import { UsersStatsProvider } from '@src/providers/usersStatsViewModel'
 import TeamsSettings from '@src/pages/settings/teams/TeamsSettings'
 import UsersSettings from '@src/pages/settings/users/UsersSettings'
+import RepositoriesSettings from '@src/pages/settings/repositories/RepositoriesSettings'
 import UnauthenticatedLayout from '@src/pages/layouts/UnauthenticatedLayout'
 import { Box, Text } from '@chakra-ui/react'
 import OrgSettings from '@src/pages/settings/org/OrgSettings'
@@ -21,6 +22,8 @@ import { GitStatsProvider } from '@src/providers/gitStatsViewModel'
 import { RepoStatsProvider } from '@src/providers/reposStatsViewModel'
 import { useAuth0 } from '@auth0/auth0-react'
 import { useAuth } from '@src/providers/authProvider'
+import UserPage from '@src/pages/users/UserPage'
+import { UserProvider } from '@src/providers/usersViewModel'
 
 export default function Router () {
 
@@ -39,11 +42,13 @@ export default function Router () {
                                 <Route path="users/:id?" element={<UsersStatsProvider><UsersStatsPage /></UsersStatsProvider>} />
                                 <Route path="repositories/:id?" element={<RepoStatsProvider><ReposStatsPage/></RepoStatsProvider>} />
                             </Route>
+                            <Route path="users/:id" element={<UserProvider><UserPage /></UserProvider>} />
                             <Route path="settings" element={ <SettingsPage />}>
                                 <Route index element={<Navigate replace to="/settings/organisation" />} />
                                 <Route path="organisation" element={<OrgSettings />} />
                                 <Route path="teams" element={<TeamsSettings />} />
                                 <Route path="users" element={<UsersSettings />} />
+                                <Route path="repositories" element={<RepositoriesSettings />} />
                             </Route>         
                             <Route path="signup" element={<SignupPage />} />
                     </Route>       

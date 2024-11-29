@@ -105,25 +105,28 @@ class EmlabCdkStack(Stack):
         )
         
         # Create a PostgreSQL RDS database
-        db = rds.DatabaseInstance(
-            self, "EmlabDatabase",
-            engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16),
-            credentials=rds.Credentials.from_generated_secret(username="emlabserver"),
-            instance_type=ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO),
-            vpc=vpc,
-            allocated_storage=20,
-            database_name="EmlabDatabase",
-            delete_automated_backups=True,
-            deletion_protection=False,
-            backup_retention=Duration.days(0),
-            security_groups=[db_security_group],
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        )
+        # db = rds.DatabaseInstance(
+        #     self, "EmlabDatabase",
+        #     engine=rds.DatabaseInstanceEngine.postgres(version=rds.PostgresEngineVersion.VER_16),
+        #     credentials=rds.Credentials.from_generated_secret(username="emlabserver"),
+        #     instance_type=ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO),
+        #     vpc=vpc,
+        #     allocated_storage=20,
+        #     database_name="EmlabDatabase",
+        #     delete_automated_backups=True,
+        #     deletion_protection=False,
+        #     backup_retention=Duration.days(0),
+        #     security_groups=[db_security_group],
+        #     vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+        # )
         
-        db.connections.allow_from_any_ipv4(ec2.Port.tcp(5432))
+        # db.connections.allow_from_any_ipv4(ec2.Port.tcp(5432))
         
         # Define the task definition
-        task_definition = ecs.FargateTaskDefinition(self, "TaskDef")
+        task_definition = ecs.FargateTaskDefinition(self, 
+                                                    "TaskDef",
+                                                    memory_limit_mib=1024,
+                                                    cpu=512)
 
         # Add a container to the task definition
         
@@ -133,13 +136,15 @@ class EmlabCdkStack(Stack):
             platform=ecr_assets.Platform.LINUX_AMD64            
         )
         
+        db_secret_arn = "arn:aws:secretsmanager:eu-west-2:834803522181:secret:rds!db-a90903e6-e624-477c-b17e-66e7bd4dce76-b5ZhUM"
+        
         container = task_definition.add_container(
             "EmlabContainer",
             # image=ecs.ContainerImage.from_ecr_repository(repository, tag="latest"),
             image=ecs.ContainerImage.from_docker_image_asset(flask_image),
             logging=ecs.LogDrivers.aws_logs(stream_prefix="WebServer"),
             environment={
-                "DB_SQL_SECRET_ARN": db.secret.secret_arn,
+                "DB_SQL_SECRET_ARN": db_secret_arn,
                 "AUTH0_DOMAIN": "emlab.uk.auth0.com",
                 "AUTH0_CLIENTID":"3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq"
             }
@@ -151,11 +156,17 @@ class EmlabCdkStack(Stack):
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "EmlabService",
             cluster=cluster,
-            cpu=256,
             desired_count=1,
             task_definition=task_definition,
-            memory_limit_mib=512,        
             public_load_balancer=False            
+        )
+        
+        fargate_service.target_group.configure_health_check(
+            path="/health",
+            interval=Duration.seconds(30),
+            timeout=Duration.seconds(5),
+            healthy_threshold_count=2,
+            unhealthy_threshold_count=2
         )
         
         db_security_group.add_ingress_rule(
@@ -163,7 +174,13 @@ class EmlabCdkStack(Stack):
             connection=ec2.Port.tcp(5432)
         )
         
-        db.secret.grant_read(fargate_service.task_definition.task_role)
+        # db.secret.grant_read(fargate_service.task_definition.task_role)
+        fargate_service.task_definition.task_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[db_secret_arn]
+            )
+        )
         
         fargate_service.service.connections.security_groups[0].add_ingress_rule(
             peer = ec2.Peer.ipv4(vpc.vpc_cidr_block),
@@ -229,11 +246,12 @@ class EmlabCdkStack(Stack):
             scale_out_cooldown=Duration.seconds(60),
         )
         
-        github_import_stream = kinesis.Stream(self, "github_import", stream_name="github_import")
-        github_events_stream = kinesis.Stream(self, "github_events", stream_name="github_events")
+        github_import_stream   = kinesis.Stream(self, "github_import", stream_name="github_import")
+        github_events_stream   = kinesis.Stream(self, "github_events", stream_name="github_events")
+        ai_agent_events_stream = kinesis.Stream(self, "ai_agent_events", stream_name="ai_agent_events")
         
  
-        # Define the Docker image asset
+        # Define the md64 image asset
         lamda_image = ecr_assets.DockerImageAsset(self, "LambdaImage",
             directory="../src",
             file="./build/lambda/Dockerfile",
@@ -249,10 +267,11 @@ class EmlabCdkStack(Stack):
                 cmd=["lambda_github_import.handler"]
             ),
             vpc=vpc,
+            memory_size=1024,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
             timeout=Duration.seconds(600),
             environment={
-                "DB_SQL_SECRET_ARN": db.secret.secret_arn
+                "DB_SQL_SECRET_ARN": db_secret_arn
             }
         )
         
@@ -264,18 +283,43 @@ class EmlabCdkStack(Stack):
                 cmd=["lambda_github_events.handler"]
             ),
             vpc=vpc,
+            memory_size=1024,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
-            timeout=Duration.seconds(60),
+            timeout=Duration.seconds(15),
             environment={
-                "DB_SQL_SECRET_ARN": db.secret.secret_arn
+                "DB_SQL_SECRET_ARN": db_secret_arn
+            }
+        )
+        
+        process_ai_agent_events_lambda_function = _lambda.DockerImageFunction(
+            self, "AiAgentLambdaFunction",
+            code=_lambda.DockerImageCode.from_ecr(
+                repository=lamda_image.repository,
+                tag=lamda_image.image_tag,
+                cmd=["lambda_ai_agent_events.handler"]
+            ),
+            vpc=vpc,
+            memory_size=1024,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
+            timeout=Duration.seconds(15),
+            environment={
+                "DB_SQL_SECRET_ARN": db_secret_arn
             }
         )
         
         github_secret_arn="arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/githubcert-ybijhW"
+        gemini_secret_arn="arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/gcp_gemini_key-UXAptV"
         process_github_import_lambda_function.role.add_to_policy(
             iam.PolicyStatement(
                 actions=["secretsmanager:GetSecretValue"],
                 resources=[github_secret_arn]
+            )
+        )
+        
+        process_ai_agent_events_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[gemini_secret_arn, github_secret_arn]
             )
         )
         
@@ -287,7 +331,13 @@ class EmlabCdkStack(Stack):
         )
                 
         # Grant the Lambda function permissions to read the secret
-        db.secret.grant_read(process_github_import_lambda_function.role)
+        # db.secret.grant_read(process_github_import_lambda_function.role)
+        process_github_import_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[db_secret_arn]
+            )
+        )
         github_import_stream.grant_read(process_github_import_lambda_function)            
         # Create a Kinesis event source
         kinesis_import_event_source = lambda_event_source.KinesisEventSource(
@@ -295,17 +345,40 @@ class EmlabCdkStack(Stack):
             starting_position=_lambda.StartingPosition.TRIM_HORIZON
         )
         process_github_import_lambda_function.add_event_source(kinesis_import_event_source)  
-        
+                
+        # db.secret.grant_read(process_ai_agent_events_lambda_function.role)
+        process_ai_agent_events_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[db_secret_arn]
+            )
+        )
+        ai_agent_events_stream.grant_read(process_ai_agent_events_lambda_function)            
         # Create a Kinesis event source
-        db.secret.grant_read(process_github_events_lambda_function.role)
+        kinesis_ai_agent_event_source = lambda_event_source.KinesisEventSource(
+            ai_agent_events_stream,  # the Kinesis stream
+            starting_position=_lambda.StartingPosition.TRIM_HORIZON
+        )
+        process_ai_agent_events_lambda_function.add_event_source(kinesis_ai_agent_event_source)          
+                
+        # Create a Kinesis event source
+        # db.secret.grant_read(process_github_events_lambda_function.role)
+        process_github_events_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[db_secret_arn]
+            )
+        )
+        
+        ai_agent_events_stream.grant_write(process_github_events_lambda_function)       
+        
         github_events_stream.grant_read(process_github_events_lambda_function)
         
         kinesis_events_event_source = lambda_event_source.KinesisEventSource(
             github_events_stream,  # the Kinesis stream
             starting_position=_lambda.StartingPosition.TRIM_HORIZON
         )
-        process_github_events_lambda_function.add_event_source(kinesis_events_event_source)      
-        
+        process_github_events_lambda_function.add_event_source(kinesis_events_event_source)              
         
         dynamodb_usertable = ddb.Table(
             self, 

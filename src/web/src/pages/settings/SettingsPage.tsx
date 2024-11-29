@@ -10,6 +10,10 @@ const listItems = [
         url: '/settings/teams'
     },
     {
+        text: 'Repositories',
+        url: '/settings/repositories'
+    },
+    {
         text: 'Users',
         url: '/settings/users'
     }

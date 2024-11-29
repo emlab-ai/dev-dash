@@ -1,22 +1,10 @@
 import { useAxiosClient } from "@src/clients/backendClient";
 import { User } from "@src/model";
+import useDebounceCallback from "@src/utils/debounce";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-interface UsersSettingsModel {
-    users: User[];
-    nextPage: () => void;
-    prevPage: () => void;
-    hasNext: boolean;
-    hasPrev: boolean;
-    createUserAsync: (user: User) => Promise<void>;
-    deleteUserAsync: (userId: number) => Promise<void>;
-    updateUserAsync: (user: User) => Promise<void>;
-    refreshAsync: () => Promise<void>;
-    cursor: string;
-}
-
-export const useUsersSettingsModel = (): UsersSettingsModel => {
+export const useUsersSettingsModel = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [usersBefore, setUsersBefore] = useState<string | null>(null);
     const [usersAfter, setUsersAfter] = useState<string | null>(null);
@@ -24,7 +12,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
     const [cursor, setCursor] = useState(searchParams.get('cursor') as string | undefined ?? "");
     const navigate = useNavigate();
     const backendClient = useAxiosClient();
-
+    const [userFilter, setUserFilter] = useState<string | undefined>();
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
@@ -41,14 +29,19 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         });
     }, [cursor, navigate]);
 
-    const fetchUsersAsync = useCallback(async (before?: string, after?: string) => {
+    const fetchUsersAsync = useDebounceCallback(async (before?: string, after?: string, userFilter?: string) => {
         try {
             let pageStr = '';
             if (!!before) {
                 pageStr = `&before=${before}`;
             } else if (!!after) {
                 pageStr = `&after=${after}`;
+            }            
+
+            if (userFilter) {
+                pageStr += `&filter=${userFilter}`;
             }
+
             const response = await backendClient(`/api/users?page_size=20${pageStr}`);
             const result = await response.data;
 
@@ -59,7 +52,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         } catch (error) {
             console.error('Error fetching reviews', error);
         }
-    }, [backendClient]);
+    }, 300, [backendClient]);
 
     const createUserAsync = useCallback(async (user: User) => {
         const response = await backendClient('/api/users', {
@@ -72,6 +65,13 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         setUsers((users) => [...users, result]);
     }, [backendClient, setUsers]);
 
+    useEffect(() => {
+        if (userFilter !== undefined){
+            fetchUsersAsync(undefined, undefined, userFilter);
+        }
+
+    }, [userFilter, fetchUsersAsync]);
+
     const updateUserAsync = useCallback(async (user: User) => {
         const response = await backendClient('/api/users', {
             method: 'PUT',
@@ -82,7 +82,7 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         const result = await response.data;
 
         setUsers((users) => {
-            var index = users.findIndex(u => u.id === user.id);
+            const index = users.findIndex(u => u.id === user.id);
             const res = users.splice(0);
             res[index] = result;
             return res;
@@ -102,26 +102,27 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
     }, [backendClient, setUsers]);
 
     const refreshAsync = useCallback(async () => {
-        fetchUsersAsync(undefined, cursor);
-    }, [cursor, fetchUsersAsync])
+        fetchUsersAsync(undefined, cursor, userFilter);
+    }, [cursor, fetchUsersAsync, userFilter])
 
     useEffect(() => {
         refreshAsync();
-    }, [])
+    }, []);
 
     const nextPage = useCallback(async () => {
         if (!usersAfter) {
             return;
         }
-        fetchUsersAsync(undefined, usersAfter);
-    }, [usersAfter, fetchUsersAsync]);
+        fetchUsersAsync(undefined, usersAfter, userFilter);
+    }, [usersAfter, fetchUsersAsync, userFilter]);
 
     const prevPage = useCallback(async () => {
         if (!usersBefore) {
             return;
         }
-        fetchUsersAsync(usersBefore);
-    }, [usersBefore, fetchUsersAsync]);
+
+        fetchUsersAsync(usersBefore, undefined, userFilter);
+    }, [usersBefore, fetchUsersAsync, userFilter]);
 
     return {
         users,
@@ -133,10 +134,13 @@ export const useUsersSettingsModel = (): UsersSettingsModel => {
         createUserAsync,
         deleteUserAsync,
         updateUserAsync,
+        userFilter, 
+        setUserFilter,
         cursor
     };
 };
 
+type UsersSettingsModel = ReturnType<typeof useUsersSettingsModel>;
 
 // Create the context
 const UsersSettingsContext: React.Context<UsersSettingsModel | null> = createContext<UsersSettingsModel | null>(null);

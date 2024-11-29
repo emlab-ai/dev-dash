@@ -16,7 +16,7 @@ def setup_sql_engine(app):
     return Session
 
 def get_sql_connection_string():
-    print(app_config.DB_SQL_SECRET_ARN)
+    print("USING ARN:" + app_config.DB_SQL_SECRET_ARN)
     if app_config.DB_SQL_SECRET_ARN:
         secretStr = get_aws_secret(app_config.DB_SQL_SECRET_ARN, app_config.AWS_REGION)     
         
@@ -24,9 +24,9 @@ def get_sql_connection_string():
         
         username = secret['username']
         password = secret['password']
-        host = secret['host']
-        dbname = secret['dbname']
-        port = secret['port']
+        host = app_config.DB_HOST
+        dbname = app_config.DB_NAME
+        port = app_config.DB_PORT
         print(host)
            
         connection_string = f"postgresql://{username}:{password}@{host}:{port}/{dbname}"

@@ -38,5 +38,11 @@ AWS_REGION = os.getenv('AWS_REGION', 'eu-west-2')
 
 IMPORT_STREAM_ARN=os.getenv('IMPORT_STREAM_ARN', "arn:aws:kinesis:eu-west-2:834803522181:stream/github_import")
 EVENTS_STREAM_ARN=os.getenv('EVENTS_STREAM_ARN', "arn:aws:kinesis:eu-west-2:834803522181:stream/github_events")
+AI_AGENT_STREAM_ARN=os.getenv('AI_AGENT_STREAM_ARN', "arn:aws:kinesis:eu-west-2:834803522181:stream/ai_agent_events")
 
-DB_SQL_SECRET_ARN = os.getenv('DB_SQL_SECRET_ARN', 'arn:aws:secretsmanager:eu-west-2:834803522181:secret:EmlabCdkStackEmlabDatabaseS-D5QySQGBugFQ-erMizP')
+DB_SQL_SECRET_ARN = os.getenv('DB_SQL_SECRET_ARN', 'arn:aws:secretsmanager:eu-west-2:834803522181:secret:rds!db-a90903e6-e624-477c-b17e-66e7bd4dce76-b5ZhUM')
+GEMINI_SECRET_ARN = os.getenv('GEMINI_SECRET_ARN', 'arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/gcp_gemini_key-UXAptV')
+
+DB_HOST = os.getenv('DB_HOST', 'emlab.cfugkypxw81e.eu-west-2.rds.amazonaws.com')
+DB_NAME = os.getenv('DB_NAME', 'EmlabDatabase')
+DB_PORT = os.getenv('DB_PORT', '5432')

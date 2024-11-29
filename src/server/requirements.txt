@@ -15,3 +15,6 @@ PyGithub
 cachetools
 markupsafe
 boto3
+vertexai==1.71.1
+shapely==2.0.6
+google-auth==2.29.0

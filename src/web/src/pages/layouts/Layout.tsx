@@ -1,6 +1,6 @@
 import { Box, Flex, HStack, Heading, IconButton, List, ListIcon, ListItem, Menu, MenuButton, MenuItem, MenuList, Text,  useColorModeValue, useDisclosure  } from '@chakra-ui/react'
 import { BiMenu } from 'react-icons/bi'
-import { AiOutlineHome, AiOutlineSetting, AiOutlineUser, AiFillGithub } from 'react-icons/ai'
+import { AiOutlineSetting, AiOutlineUser, AiFillGithub, AiOutlineDashboard } from 'react-icons/ai'
 
 import { Head, ThemeToggle } from '@components/index'
 import { BrandName } from '@src/constants'
@@ -16,9 +16,14 @@ type ListItem = {
 }
 
 const listItems: ListItem[] = [
+  // {
+  //   text: 'User',
+  //   icon: AiOutlineUser,
+  //   link: '/users'
+  // },
   {
-    text: 'Home',
-    icon: AiOutlineHome,
+    text: 'Dashboard',
+    icon: AiOutlineDashboard, 
     link: '/'
   },
   {
