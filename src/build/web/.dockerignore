@@ -2,12 +2,21 @@
 .git
 node_modules
 build
-.env
 
 # Ignore specific file types
 *.log
 *.tmp
 *.swp
+
+# Python Environments
+.env
+.venv
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Ignore hidden files and directories
 .*

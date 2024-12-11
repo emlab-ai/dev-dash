@@ -70,7 +70,8 @@ export const useUsersSettingsModel = () => {
             fetchUsersAsync(undefined, undefined, userFilter);
         }
 
-    }, [userFilter, fetchUsersAsync]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userFilter]);
 
     const updateUserAsync = useCallback(async (user: User) => {
         const response = await backendClient('/api/users', {

@@ -1,13 +1,14 @@
-from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 from . import Base
 
+
 class GithubOrg(Base):
-    __tablename__ = 'github_orgs'
+    __tablename__ = "github_orgs"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
-    tenant = relationship('Tenant', back_populates='github_orgs', lazy=True)
+    tenant_id = Column(BigInteger, ForeignKey("tenants.id"))
+    tenant = relationship("Tenant", back_populates="github_orgs", lazy=True)
     name = Column(String(2000))
     node_id = Column(String(128))
     avatar_url = Column(String(2000))
@@ -16,7 +17,18 @@ class GithubOrg(Base):
     installation_id = Column(BigInteger)
     deleted = Column(Boolean)
 
-    def __init__(self, tenant_id, name=None, node_id=None, avatar_url=None, url=None, type=None, deleted=False, installation_id=None, id=None ):
+    def __init__(
+        self,
+        tenant_id,
+        name=None,
+        node_id=None,
+        avatar_url=None,
+        url=None,
+        type=None,
+        deleted=False,
+        installation_id=None,
+        id=None,
+    ):
         self.id = id
         self.tenant_id = tenant_id
         self.name = name
@@ -29,13 +41,13 @@ class GithubOrg(Base):
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'tenantId': self.tenant_id,
-            'name': self.name,
-            'nodeId': self.node_id,
-            'avatarUrl': self.avatar_url,
-            'url': self.url,
-            'type': self.type,
-            'installationId': self.installation_id,
-            'deleted': self.deleted
+            "id": self.id,
+            "tenantId": self.tenant_id,
+            "name": self.name,
+            "nodeId": self.node_id,
+            "avatarUrl": self.avatar_url,
+            "url": self.url,
+            "type": self.type,
+            "installationId": self.installation_id,
+            "deleted": self.deleted,
         }

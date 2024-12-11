@@ -3,17 +3,18 @@ from sqlalchemy.orm import relationship
 
 from . import Base
 
+
 class GithubPullRequestReview(Base):
-    __tablename__ = 'github_pull_requests_reviews'
+    __tablename__ = "github_pull_requests_reviews"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     node_id = Column(String(128))
-    tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
-    tenant = relationship('Tenant', lazy=True)
+    tenant_id = Column(BigInteger, ForeignKey("tenants.id"))
+    tenant = relationship("Tenant", lazy=True)
     org_id = Column(BigInteger)
     pr_id = Column(BigInteger)
     pr_number = Column(Integer)
-    repo_id = Column(BigInteger)    
+    repo_id = Column(BigInteger)
     state = Column(String)
     submitted_at = Column(Date)
     author = Column(String)
@@ -22,7 +23,22 @@ class GithubPullRequestReview(Base):
     commit_id = Column(String(256))
     state = Column(String(64))
 
-    def __init__(self, tenant_id, node_id, pr_id, org_id, pr_number, repo_id, state, submitted_at, author, author_id, body, commit_id, id=None):
+    def __init__(
+        self,
+        tenant_id,
+        node_id,
+        pr_id,
+        org_id,
+        pr_number,
+        repo_id,
+        state,
+        submitted_at,
+        author,
+        author_id,
+        body,
+        commit_id,
+        id=None,
+    ):
         self.id = id
         self.tenant_id = tenant_id
         self.node_id = node_id
@@ -39,17 +55,17 @@ class GithubPullRequestReview(Base):
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'tenantId': self.tenant_id,
-            'prId': self.pr_id,
-            'orgId': self.org_id,
-            'prNumber': self.pr_number,
-            'repoId': self.repo_id,
-            'state': self.state,
-            'publishedAt': self.submitted_at,
-            'author': self.author,
-            'authorId': self.author_id,
-            'body': self.body,
-            'commitId': self.commit_id,
-            'nodeId': self.node_id
+            "id": self.id,
+            "tenantId": self.tenant_id,
+            "prId": self.pr_id,
+            "orgId": self.org_id,
+            "prNumber": self.pr_number,
+            "repoId": self.repo_id,
+            "state": self.state,
+            "publishedAt": self.submitted_at,
+            "author": self.author,
+            "authorId": self.author_id,
+            "body": self.body,
+            "commitId": self.commit_id,
+            "nodeId": self.node_id,
         }

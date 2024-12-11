@@ -1,5 +1,3 @@
-import json
-import base64
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from services.githubImportService import GithubImportService
@@ -16,11 +14,11 @@ engine = create_engine(connection_string, echo=False)
 Session = sessionmaker(bind=engine)
 
 session = Session()
-githubService = GithubImportService(session, True)    
+githubService = GithubImportService(session, True)
 
 orgRepository = Repository(GithubOrg, session)
 org = orgRepository.get(org_id)
-    
+
 githubService.create_import_request(org.tenant, org)
-    
+
 session.commit()

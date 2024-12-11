@@ -268,7 +268,7 @@ class EmlabCdkStack(Stack):
             ),
             vpc=vpc,
             memory_size=1024,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
             timeout=Duration.seconds(600),
             environment={
                 "DB_SQL_SECRET_ARN": db_secret_arn
@@ -284,7 +284,7 @@ class EmlabCdkStack(Stack):
             ),
             vpc=vpc,
             memory_size=1024,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
             timeout=Duration.seconds(15),
             environment={
                 "DB_SQL_SECRET_ARN": db_secret_arn
@@ -300,7 +300,7 @@ class EmlabCdkStack(Stack):
             ),
             vpc=vpc,
             memory_size=1024,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_NAT),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
             timeout=Duration.seconds(15),
             environment={
                 "DB_SQL_SECRET_ARN": db_secret_arn

@@ -1,0 +1,28 @@
+{
+    "python.testing.pytestArgs": [
+        "server"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.analysis.autoSearchPaths": false,
+    "python.analysis.typeCheckingMode": "basic",
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/venv": true,
+        "**/__pycache__": true,
+        ".git": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/venv/**": true,
+        "**/__pycache__/**": true
+    },
+    "python.analysis.exclude": [
+        "**/venv/**",
+        "**/__pycache__/**"
+    ]
+}

@@ -1,45 +1,63 @@
-from datetime import datetime, timezone
-import json
+from datetime import datetime
 import logging
 
 from cachetools import TTLCache, cached
 from db.model.githubIssue import GithubIssue
 
-from db.model import PullRequest, GithubEvent, GithubRepo, GithubOrg, GithubInstallation, GithubUser,GithubIssueComment, GithubPullRequestReviewComment, GithubPullRequestReview
+from db.model import (
+    PullRequest,
+    GithubEvent,
+    GithubRepo,
+    GithubOrg,
+    GithubInstallation,
+    GithubUser,
+    GithubIssueComment,
+    GithubPullRequestReviewComment,
+    GithubPullRequestReview,
+)
 from db.repository.repository import Repository
 from events.producer import publish_to_kinesis
 from db.model.repoSettings import RepoSettings
 from services.aiAgentService import AiAgentService
 from services.githubImportService import GithubImportService
 from utils import log_exceptions
-from services.event_helpers import issue_comment_to_model, issue_to_model, pull_request_event_to_model, pull_request_review_comment_to_model, pull_request_review_to_model, repository_to_model
+from services.event_helpers import (
+    issue_comment_to_model,
+    issue_to_model,
+    pull_request_event_to_model,
+    pull_request_review_comment_to_model,
+    pull_request_review_to_model,
+    repository_to_model,
+)
 from services.githubClient import github_gql_query
 import app_config
 from app_logger import logger
 
 tenant_cache = TTLCache(maxsize=10000, ttl=300000)
 
+
 class GithubWebhookService:
     def __init__(self, session):
         self.session = session
         self.userRepository = Repository(GithubUser, session)
 
-    @log_exceptions(log_args = True)
+    @log_exceptions(log_args=True)
     def record_event(self, event_type, deliveryId, data):
-            body = {
-                "data": data,
-                "event_type": event_type,
-                "delivery_id": deliveryId
-            }
-            
-            publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), body)      
-        
+        body = {"data": data, "event_type": event_type, "delivery_id": deliveryId}
+
+        publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), body)
+
     def process_event(self, event_type, deliveryId, data):
         eventRepo = Repository(GithubEvent, self.session)
-        
-        if eventRepo.find_one(GithubEvent.delivery_id == deliveryId, GithubEvent.failed == False) is not None:
+
+        if (
+            eventRepo.find_one(
+                GithubEvent.delivery_id == deliveryId, GithubEvent.failed is False
+            )
+            is not None
+        ):
             return
-        
+
         installationId = data["installation"]["id"]
 
         try:
@@ -57,28 +75,40 @@ class GithubWebhookService:
                 self.process_installation_repositories(data)
             elif event_type == "issues":
                 self.process_issues(data)
-            
-            eventRepo.create(GithubEvent(installation_id = installationId,
-                received_at = datetime.utcnow(),
-                delivery_id = deliveryId,
-                data = data))
+
+            eventRepo.create(
+                GithubEvent(
+                    installation_id=installationId,
+                    received_at=datetime.utcnow(),
+                    delivery_id=deliveryId,
+                    data=data,
+                )
+            )
         except Exception as e:
-            logging.error(f"Failed to process event {event_type} for installation {installationId}, error: {e}")
-            eventRepo.create(GithubEvent(installation_id = installationId,
-                data=data,
-                received_at = datetime.utcnow(),
-                failed = True,
-                error_text = str(e),
-                delivery_id = deliveryId))
+            logging.error(
+                f"Failed to process event {event_type} for installation {installationId}, error: {e}"
+            )
+            eventRepo.create(
+                GithubEvent(
+                    installation_id=installationId,
+                    data=data,
+                    received_at=datetime.utcnow(),
+                    failed=True,
+                    error_text=str(e),
+                    delivery_id=deliveryId,
+                )
+            )
 
         return True
 
     @cached(tenant_cache)
     def _get_tenant_for_installation(self, installation_id):
         instRepository = Repository(GithubInstallation, self.session)
-        inst = instRepository.find_one(GithubInstallation.installation_id == installation_id)
+        inst = instRepository.find_one(
+            GithubInstallation.installation_id == installation_id
+        )
         return inst.tenant if inst else None
-    
+
     def process_issue_comment(self, data):
         installationId = data["installation"]["id"]
         tenant = self._get_tenant_for_installation(installationId)
@@ -103,34 +133,35 @@ class GithubWebhookService:
         repoRepository = Repository(GithubRepo, self.session)
         orgRepository = Repository(GithubOrg, self.session)
         instRepository = Repository(GithubInstallation, self.session)
-        
+
         orgJson = data["installation"]["account"]
         org_id = orgJson["id"]
-        
-        inst = instRepository.find_one(GithubInstallation.installation_id == installationId)
-        org = orgRepository.get(org_id, tenant_id = tenant.id)
+
+        inst = instRepository.find_one(
+            GithubInstallation.installation_id == installationId
+        )
+        org = orgRepository.get(org_id, tenant_id=tenant.id)
 
         if data["action"] == "created":
-                       
 
             if not org:
                 org = GithubOrg(
-                    id = org_id,
-                    tenant_id = tenant.id,                
-                    node_id = orgJson["node_id"],
-                    name= orgJson["login"],
-                    url = orgJson["html_url"],
-                    avatar_url= orgJson["avatar_url"],
-                    installation_id= installationId,
-                    type= orgJson["type"])                
+                    id=org_id,
+                    tenant_id=tenant.id,
+                    node_id=orgJson["node_id"],
+                    name=orgJson["login"],
+                    url=orgJson["html_url"],
+                    avatar_url=orgJson["avatar_url"],
+                    installation_id=installationId,
+                    type=orgJson["type"],
+                )
                 orgRepository.upsert(org)
                 inst.org_id = org_id
                 instRepository.update(inst)
 
-
             for repo in data["repositories"]:
                 repoRepository.upsert(repository_to_model(tenant, org, repo))
-                
+
             GithubImportService(self.session).create_import_request(tenant, org)
         elif data["action"] == "deleted":
             if inst:
@@ -140,30 +171,29 @@ class GithubWebhookService:
                 inst.deleted = True
                 instRepository.update(inst)
 
-
     def process_installation_repositories(self, data):
         installationId = data["installation"]["id"]
         tenant = self._get_tenant_for_installation(installationId)
         repoRepository = Repository(GithubRepo, self.session)
         orgRepository = Repository(GithubOrg, self.session)
-        
+
         org = orgRepository.find_one(GithubOrg.installation_id == installationId)
 
         for repo in data["repositories_added"]:
             repoRepository.upsert(repository_to_model(tenant, org, repo))
-        
+
         for repo in data["repositories_removed"]:
             repo = repoRepository.get(repo["id"])
             repo.deleted = True
             repoRepository.update(repo)
 
     def process_pull_request(self, data):
-        logger.info(f"Processing pull request event")
-        
+        logger.info("Processing pull request event")
+
         action = data["action"]
         pull_request = data["pull_request"]
         installation_id = data["installation"]["id"]
-        node_id = pull_request["node_id"]    
+        node_id = pull_request["node_id"]
 
         query = f"""
             query {{
@@ -180,13 +210,13 @@ class GithubWebhookService:
                         }}
                     }}
                     }}
-                }}                
+                }}
                 }}
             }}
         """
 
         firstCommitDate = None
-        firstCommitMessage = ''
+        firstCommitMessage = ""
 
         if action == "closed":
             result = github_gql_query(query, installation_id)
@@ -196,50 +226,69 @@ class GithubWebhookService:
             firstCommitMessage = commit.message
 
         # if not (action == "closed" or action == "opened"):
-        #     return        
+        #     return
 
         tenant = self._get_tenant_for_installation(installation_id)
         prRecord = pull_request_event_to_model(tenant, data)
         logger.info(f"Processing pull request {prRecord.url}")
-        
+
         prRecord.first_commit_date = firstCommitDate
         prRecord.first_commit_message = firstCommitMessage
-        
+
         settinsRepo = Repository(RepoSettings, self.session)
         prRepo = Repository(PullRequest, self.session)
         orgRepo = Repository(GithubOrg, self.session)
         repoRepo = Repository(GithubRepo, self.session)
         repo = repoRepo.get(prRecord.repository_id, tenant.id)
         if repo is None:
-            logger.info(f"Repository not found for tenant {tenant.id} and repository {prRecord.repository_id}")
-            # TODO: import unknown repository 
+            logger.info(
+                f"Repository not found for tenant {tenant.id} and repository {prRecord.repository_id}"
+            )
+            # TODO: import unknown repository
             return
-        
-        logger.info(f"Requset settings for tenant {tenant.id} and repository {prRecord.repository_id}")
-        settings = settinsRepo.find_one(RepoSettings.repository_id == prRecord.repository_id and RepoSettings.tenant_id == tenant.id)
+
+        logger.info(
+            f"Requset settings for tenant {tenant.id} and repository {prRecord.repository_id}"
+        )
+        settings = settinsRepo.find_one(
+            RepoSettings.repository_id == prRecord.repository_id
+            and RepoSettings.tenant_id == tenant.id
+        )
         if settings:
-            logger.info(f"Settings found for tenant {tenant.id} and repository {prRecord.repository_id}")
-            
-        if settings and settings.disable_tracking and not settings.enable_description_review:
-            logger.info(f"Tracking disabled for tenant {tenant.id} and repository {prRecord.repository_id}")
+            logger.info(
+                f"Settings found for tenant {tenant.id} and repository {prRecord.repository_id}"
+            )
+
+        if (
+            settings
+            and settings.disable_tracking
+            and not settings.enable_description_review
+        ):
+            logger.info(
+                f"Tracking disabled for tenant {tenant.id} and repository {prRecord.repository_id}"
+            )
             return
-        
+
         org = orgRepo.get(prRecord.org_id, tenant.id)
         if org is None:
             return
-        
+
         oldPr = prRepo.get(prRecord.id, tenant.id)
-        
+
         prRepo.upsert(prRecord)
-        
+
         if settings and settings.review_prompt:
             if oldPr and oldPr.title == prRecord.title and oldPr.body == prRecord.body:
-                logger.info(f"PR title and body did not change for tenant {tenant.id} and repository {prRecord.repository_id}")
+                logger.info(
+                    f"PR title and body did not change for tenant {tenant.id} and repository {prRecord.repository_id}"
+                )
                 return
-            logger.info(f"Creating PR review request for tenant {tenant.id} and repository {prRecord.repository_id}")
+            logger.info(
+                f"Creating PR review request for tenant {tenant.id} and repository {prRecord.repository_id}"
+            )
             aiAgetService = AiAgentService(self.session)
             aiAgetService.create_pr_review_request(tenant, org, prRecord.id)
-        
+
         if not (action == "opened"):
             return
 
@@ -259,7 +308,7 @@ class GithubWebhookService:
     def process_pull_request_review(self, data):
         installationId = data["installation"]["id"]
         tenant = self._get_tenant_for_installation(installationId)
-        action = data["action"]   
+        action = data["action"]
         review = data["review"]
         reviewRepo = Repository(GithubPullRequestReview, self.session)
 
@@ -267,7 +316,7 @@ class GithubWebhookService:
             reviewRecord = pull_request_review_to_model(tenant, data)
             reviewRepo.upsert(reviewRecord)
 
-        elif action == 'dismissed':
+        elif action == "dismissed":
             review = reviewRepo.get(review["id"])
             review.state = "dismissed"
             reviewRepo.update(review)

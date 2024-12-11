@@ -20,6 +20,7 @@ export type PullRequest = {
     additions:number;
     bodyText:string;
     title:string;
+    state: string;
     commitsCount:number;
     firstCommitMessage:string;
     firstCommitDate: Date;

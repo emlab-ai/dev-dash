@@ -2,18 +2,19 @@ from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from . import Base
 
+
 class PullRequest(Base):
-    __tablename__ = 'pull_requests'
+    __tablename__ = "pull_requests"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
-    tenant = relationship('Tenant', lazy=True)
+    tenant_id = Column(BigInteger, ForeignKey("tenants.id"))
+    tenant = relationship("Tenant", lazy=True)
 
     author = Column(String(256))
     author_id = Column(BigInteger)
     node_id = Column(String(128))
     org_id = Column(BigInteger)
-    repository_id = Column(BigInteger, ForeignKey('github_repos.id'))
+    repository_id = Column(BigInteger, ForeignKey("github_repos.id"))
     number = Column(Integer)
     closed_at = Column(DateTime)
     created_at = Column(DateTime)
@@ -30,9 +31,33 @@ class PullRequest(Base):
     url = Column(String(2000))
     state = Column(String(64), nullable=True)
 
-    repository = relationship('GithubRepo')
-    
-    def __init__(self, id, tenant_id, author, author_id, node_id, org_id, repository_id, number, closed_at, created_at, changed_files, deletions, additions, body, title, commits_count, first_commit_message, first_commit_date, review_threads_count, comments_count, url, state):
+    repository = relationship("GithubRepo")
+
+    def __init__(
+        self,
+        id,
+        tenant_id,
+        author,
+        author_id,
+        node_id,
+        org_id,
+        repository_id,
+        number,
+        closed_at,
+        created_at,
+        changed_files,
+        deletions,
+        additions,
+        body,
+        title,
+        commits_count,
+        first_commit_message,
+        first_commit_date,
+        review_threads_count,
+        comments_count,
+        url,
+        state,
+    ):
         self.id = id
         self.tenant_id = tenant_id
         self.author = author
@@ -55,29 +80,29 @@ class PullRequest(Base):
         self.comments_count = comments_count
         self.url = url
         self.state = state
-        
+
     def to_dict(self):
         return {
-            'id': self.id,
-            'tenantId': self.tenant_id,
-            'author': self.author,
-            'authorId': self.author_id,
-            'nodeId': self.node_id,
-            'orgId': self.org_id,
-            'repositoryId': self.repository_id,
-            'number': self.number,
-            'closedAt': self.closed_at,
-            'createdAt': self.created_at,
-            'changedFiles': self.changed_files,
-            'deletions': self.deletions,
-            'additions': self.additions,
-            'body': self.body,
-            'title': self.title,
-            'commitsCount': self.commits_count,
-            'firstCommitMessage': self.first_commit_message,
-            'firstCommitDate': self.first_commit_date,
-            'reviewThreadsCount': self.review_threads_count,
-            'commentsCount': self.comments_count,
-            'url': self.url,
-            'state': self.state
+            "id": self.id,
+            "tenantId": self.tenant_id,
+            "author": self.author,
+            "authorId": self.author_id,
+            "nodeId": self.node_id,
+            "orgId": self.org_id,
+            "repositoryId": self.repository_id,
+            "number": self.number,
+            "closedAt": self.closed_at,
+            "createdAt": self.created_at,
+            "changedFiles": self.changed_files,
+            "deletions": self.deletions,
+            "additions": self.additions,
+            "body": self.body,
+            "title": self.title,
+            "commitsCount": self.commits_count,
+            "firstCommitMessage": self.first_commit_message,
+            "firstCommitDate": self.first_commit_date,
+            "reviewThreadsCount": self.review_threads_count,
+            "commentsCount": self.comments_count,
+            "url": self.url,
+            "state": self.state,
         }

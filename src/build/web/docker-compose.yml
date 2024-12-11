@@ -7,7 +7,7 @@ services:
     environment:
       - SQL_DATABASE_URI=postgresql://postgres:bonaventura@host.docker.internal:5432/emlab_ai
       - AWS_ACCESS_KEY_ID=AKIA4EXRK3KCT2QNQ66K
-      - AWS_SECRET_ACCESS_KEY=
+      - AWS_SECRET_ACCESS_KEY=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
       - AWS_DEFAULT_REGION=eu-west-2
       - DEBUG=True
     ports:

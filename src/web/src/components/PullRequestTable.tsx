@@ -39,7 +39,7 @@ export default function PullRequestTable({data}:any) {
                                     <Text fontSize="xs">{pr.repositoryName}</Text>
                                 </VStack>
                             </Td>                            
-                            <Td pl={0}><PrStatus status={"Merged"} date={pr.closedAt}/></Td>
+                            <Td pl={0}><PrStatus status={pr.state} date={pr.closedAt}/></Td>
                             <Td pl={0} textAlign="left"><TableCellCodeDelta deletions={pr.deletions} additions={pr.additions}/></Td>
                             <Td pl={0}><TableCellDuration hours={pr.totalDuration}/></Td>
                         </Tr>

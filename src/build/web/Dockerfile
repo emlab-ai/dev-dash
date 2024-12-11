@@ -4,17 +4,29 @@ FROM python:3.12-alpine as base
 # Set working directory
 WORKDIR /app
 
+RUN apk update
 # Install GCC and other build tools in the base image
-RUN apk add --no-cache gcc musl-dev python3-dev libffi-dev openssl-dev cargo geos-dev
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo \
+    py3-shapely \
+    geos-dev
 
+RUN geos-config --cflags
+ENV CFLAGS="-Wno-error=incompatible-pointer-types"
 # Copy the requirements file for Python dependencies
 COPY ./server/requirements.txt /app/requirements.txt
 
+RUN pip install --upgrade pip
 # Install Python dependencies in the base image
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Stage 1: Build the web app
-FROM node:21 as builder
+FROM node:22 as builder
 
 WORKDIR /app
 

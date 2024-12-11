@@ -1,13 +1,14 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Column, ForeignKey, String
 from sqlalchemy.orm import relationship
 from . import Base
 
+
 class GithubUser(Base):
-    __tablename__ = 'github_users'
+    __tablename__ = "github_users"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    tenant_id = Column(BigInteger, ForeignKey('tenants.id'))
-    tenant = relationship('Tenant', lazy=True)
+    tenant_id = Column(BigInteger, ForeignKey("tenants.id"))
+    tenant = relationship("Tenant", lazy=True)
     login = Column(String)
     email = Column(String)
     name = Column(String)
@@ -25,11 +26,11 @@ class GithubUser(Base):
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'tenantId': self.tenant_id, 
-            'name': self.name,
-            'email': self.email,
-            'login': self.login,
-            'nodeId': self.node_id,
-            'avatarUrl': self.avatar_url
+            "id": self.id,
+            "tenantId": self.tenant_id,
+            "name": self.name,
+            "email": self.email,
+            "login": self.login,
+            "nodeId": self.node_id,
+            "avatarUrl": self.avatar_url,
         }

@@ -27,7 +27,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                 size: 800,
                 accessorKey: 'title',
                 cell: ({ row }: any) => {
-                    var pr = row.original;
+                    const pr = row.original;
                     return <VStack width="100%" align="left" mt={4} mb={4}>
                         <Heading as="h2" size="sm" maxH="40px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{pr.title}</Heading>
                         <Box>
@@ -36,7 +36,7 @@ const PrTable = ({ onClickOnLine }: { onClickOnLine: (onClickOnLine: PullRequest
                                     <ExternalLinkIcon mx="2px" />
                                     #{pr.number}
                                 </Link>&nbsp;
-                                closed {new Date(pr.closedAt).toLocaleDateString()}
+                                {pr.state} {new Date(pr.closedAt).toLocaleDateString()}
                                 &nbsp; created by <NavLink to={`/gitstats/users/${pr.authorId}`}>@{pr.author}</NavLink> </Text>
                         </Box>
                     </VStack>
