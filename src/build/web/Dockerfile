@@ -1,5 +1,5 @@
 # Stage 0: Create a reusable base image for Python with necessary tools
-FROM python:3.12-alpine as base
+FROM python:3.13-alpine as base
 
 # Set working directory
 WORKDIR /app
@@ -18,12 +18,18 @@ RUN apk add --no-cache \
 
 RUN geos-config --cflags
 ENV CFLAGS="-Wno-error=incompatible-pointer-types"
-# Copy the requirements file for Python dependencies
-COPY ./server/requirements.txt /app/requirements.txt
 
 RUN pip install --upgrade pip
+RUN pip install poetry
+
+# Copy the requirements file for Python dependencies
+# COPY ./server/requirements.txt /app/requirements.txt
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./poetry.lock /app/poetry.lock
+
 # Install Python dependencies in the base image
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN poetry install
 
 # Stage 1: Build the web app
 FROM node:22 as builder
@@ -52,4 +58,4 @@ COPY --from=builder /app/dist /app/static/dist
 EXPOSE 8080
 
 # Set the entry point command to run the server.py file
-CMD ["python", "/app/server.py"]
+CMD ["poetry", "run", "python", "/app/server.py"]

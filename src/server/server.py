@@ -2,8 +2,14 @@ import os
 import uuid
 import uvicorn
 from app_auth import validate_token
-from app_context import context_session, context_trace_id, context_user
-from app_sql import setup_sql_engine
+from app_context import (
+    context_session,
+    context_trace_id,
+    context_user,
+    context_async_session,
+)
+from app_sql import setup_async_sql_engine, setup_sql_engine
+import app_config
 from controllers import (
     tenant_controller,
     repo_settings_controller,
@@ -18,7 +24,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from db.model.metric import setup_tenant_metrics
 from services.githubClient import setup_github_app
+from contextlib import asynccontextmanager
 
 # import tracemalloc
 # import gc
@@ -36,7 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Session = setup_sql_engine(app)
+Session = setup_sql_engine()
+AsyncSession = setup_async_sql_engine()
 setup_github_app()
 
 
@@ -46,6 +55,13 @@ def send_from_directory(directory, path):
         return FileResponse(file_path)
 
     return {"error": "File not found"}, 404
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with AsyncSession() as session:
+        await setup_tenant_metrics(session)
+    yield
 
 
 # @app.route('/assets/<path:path>')
@@ -90,14 +106,17 @@ async def request_middleware(request: Request, call_next):
     # snapshot1 = tracemalloc.take_snapshot()
 
     with Session() as session:
-        context_session.set(session)
-        trace_id = request.headers.get("x-ms-request-id") or str(uuid.uuid4().hex)
-        context_trace_id.set(trace_id)
-        authorize_api_endpoints(request)
+        async with AsyncSession() as asyncSession:
+            context_session.set(session)
+            context_async_session.set(asyncSession)
+            trace_id = request.headers.get("x-ms-request-id") or str(uuid.uuid4().hex)
+            context_trace_id.set(trace_id)
+            authorize_api_endpoints(request)
 
-        response = await call_next(request)
-        context_session.set(None)
-        return response
+            response = await call_next(request)
+            context_session.set(None)
+            context_async_session.set(None)
+            return response
 
     # collected = gc.collect()
     # print(f"Garbage collector: collected {collected} objects.")
@@ -132,4 +151,4 @@ def serve_react_app(path: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=8080)
+    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=app_config.HOT_RELOAD)

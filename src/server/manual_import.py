@@ -10,7 +10,14 @@ org_id = 86411290
 
 logger.info("Started import handler")
 connection_string = get_sql_connection_string()
-engine = create_engine(connection_string, echo=False)
+engine = create_engine(
+    connection_string,
+    pool_size=5,
+    max_overflow=5,
+    pool_timeout=30,
+    pool_recycle=600,
+    echo=False,
+)
 Session = sessionmaker(bind=engine)
 
 session = Session()

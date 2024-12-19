@@ -142,7 +142,7 @@ class PullRequestRepository:
         query = query.filter(
             ~PullRequest.repository_id.in_(
                 self.session.query(RepoSettings.repository_id).filter(
-                    RepoSettings.disable_tracking is True
+                    RepoSettings.disable_tracking.is_(True)
                 )
             )
         )
@@ -310,7 +310,7 @@ class PullRequestRepository:
         query = query.filter(
             ~PullRequest.repository_id.in_(
                 self.session.query(RepoSettings.repository_id).filter(
-                    RepoSettings.disable_tracking is True
+                    RepoSettings.disable_tracking.is_(True)
                 )
             )
         )
@@ -467,7 +467,7 @@ class PullRequestRepository:
         query = query.filter(
             ~PullRequest.repository_id.in_(
                 self.session.query(RepoSettings.repository_id).filter(
-                    RepoSettings.disable_tracking is True
+                    RepoSettings.disable_tracking.is_(True)
                 )
             )
         )
@@ -559,7 +559,7 @@ class PullRequestRepository:
         query = query.filter(
             ~PullRequest.repository_id.in_(
                 self.session.query(RepoSettings.repository_id).filter(
-                    RepoSettings.disable_tracking is True
+                    RepoSettings.disable_tracking.is_(True)
                 )
             )
         )
@@ -672,7 +672,7 @@ class PullRequestRepository:
         query = query.filter(
             ~PullRequest.repository_id.in_(
                 self.session.query(RepoSettings.repository_id).filter(
-                    RepoSettings.disable_tracking is True
+                    RepoSettings.disable_tracking.is_(True)
                 )
             )
         )

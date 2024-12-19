@@ -13,7 +13,14 @@ def handler(event, context):
 
     try:
         connection_string = get_sql_connection_string()
-        engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
+        engine = create_engine(
+            connection_string,
+            pool_size=5,
+            max_overflow=5,
+            pool_timeout=30,
+            pool_recycle=600,
+            echo=app_config.DEBUG_SQL,
+        )
         Session = sessionmaker(bind=engine)
 
         session = Session()

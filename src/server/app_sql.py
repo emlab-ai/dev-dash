@@ -1,23 +1,52 @@
+import asyncio
 import app_config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 from db.model import Base
 from aws.secret import get_aws_secret
 import json
 
+from db.model.metric import setup_tenant_metrics
 
-def setup_sql_engine(app):
+
+def setup_sql_engine():
     connection_string = get_sql_connection_string()
     # app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
-    engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
+    engine = create_engine(
+        connection_string,
+        pool_size=5,
+        max_overflow=5,
+        pool_timeout=30,
+        pool_recycle=600,
+        echo=app_config.DEBUG_SQL,
+    )
     Session = sessionmaker(bind=engine)
 
     Base.metadata.create_all(engine)
     return Session
 
 
-def get_sql_connection_string():
+async def setup_async_sql_engine():
+    connection_string = get_sql_connection_string(is_async=True)
+    async_engine = create_async_engine(
+        connection_string,
+        pool_size=5,
+        max_overflow=5,
+        pool_timeout=30,
+        pool_recycle=600,
+        echo=app_config.DEBUG_SQL,
+    )
+
+    Session = sessionmaker(
+        bind=async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    return Session
+
+
+def get_sql_connection_string(is_async=False):
     print("USING ARN:" + app_config.DB_SQL_SECRET_ARN)
     if app_config.DB_SQL_SECRET_ARN:
         secretStr = get_aws_secret(app_config.DB_SQL_SECRET_ARN, app_config.AWS_REGION)
@@ -31,7 +60,14 @@ def get_sql_connection_string():
         port = app_config.DB_PORT
         print(host)
 
-        connection_string = f"postgresql://{username}:{password}@{host}:{port}/{dbname}"
+        if is_async:
+            connection_string = (
+                f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{dbname}"
+            )
+        else:
+            connection_string = (
+                f"postgresql://{username}:{password}@{host}:{port}/{dbname}"
+            )
     else:
         connection_string = app_config.SQL_DATABASE_URI
 

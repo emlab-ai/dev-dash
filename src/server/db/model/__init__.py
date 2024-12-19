@@ -11,10 +11,11 @@ from .tenant import Tenant
 from .pullRequest import PullRequest
 from .githubPullRequestReview import GithubPullRequestReview
 from .githubPullRequestReviewComment import GithubPullRequestReviewComment
-from .githubEvent import GithubEvent
 from .githubUser import GithubUser
 from .githubRepo import GithubRepo
 from .githubOrg import GithubOrg
+from .metric import Metric
+from .metricValue import MetricValue
 from .githubIssueComment import GithubIssueComment
 
 # from .githubIssue import GithubIssue

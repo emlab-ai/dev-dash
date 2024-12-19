@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Optional
 from aws.secret import get_aws_secret
 import jwt
 import time
@@ -11,11 +12,10 @@ from utils import log_exceptions
 from datetime import datetime, timedelta
 
 # global variables
-private_key: str = None
-token_generated_time: datetime = None
-token: str = None
-access_token_cache = TTLCache(maxsize=10000, ttl=3000)
-
+private_key: Optional[str] = None
+token_generated_time: Optional[float] = None
+token: Optional[str] = None
+access_token_cache: TTLCache[str, str] = TTLCache(maxsize=10000, ttl=3000)
 
 @log_exceptions()
 def setup_github_app():
@@ -36,6 +36,9 @@ def setup_github_app():
 def get_app_access_token() -> str:
     global token_generated_time
     global token
+    global private_key
+
+    app_id = app_config.GITHUB_APP_ID
 
     if not private_key:
         setup_github_app()
@@ -43,9 +46,10 @@ def get_app_access_token() -> str:
     if token and token_generated_time and (time.time() - token_generated_time) < 540:
         return token
 
-    time_now = int(time.time())
+    time_now = float(time.time())
     payload = {"iat": time_now, "exp": time_now + (10 * 60), "iss": app_id}
 
+    assert private_key is not None
     token = jwt.encode(payload, private_key, algorithm="RS256")
     token_generated_time = time_now
     return token

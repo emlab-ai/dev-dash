@@ -9,6 +9,7 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 TENANT_ID = os.getenv("TENANT_ID", "common")
 AUDIENCE = os.getenv("AUDIENCE")
 ISSUER = os.getenv("ISSUER")
+HOT_RELOAD: bool = bool(os.getenv("HOT_RELOAD", False))
 
 DEBUG = os.getenv("DEBUG", False)
 DEBUG_SQL = os.getenv("DEBUG_SQL", False)

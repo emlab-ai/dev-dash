@@ -1,12 +1,20 @@
 import base64
 import pickle
-from typing import Any, Callable, Generic, List, Type, TypeVar
-from sqlalchemy import ColumnExpressionArgument, and_, or_
-from sqlalchemy.orm import Session, Query, joinedload
+from typing import Any, Callable, Generic, List, Optional, Sequence, Type, TypeVar, Protocol
+from sqlalchemy import Column, ColumnExpressionArgument, Select, and_, func, or_, select
+from sqlalchemy.orm import joinedload
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from db.model.pagedResult import PagedResult
 
-T = TypeVar("T")
+
+class Entity(Protocol):
+    id: Column[int]
+    tenant_id: Column[int]
+
+
+T = TypeVar("T", bound=Entity)
+QueryT = Select[tuple[T]]
 
 
 def encode_cursor(id, sort_by: str, sort_by_value) -> str:
@@ -23,21 +31,22 @@ def decode_cursor(cursor: str) -> dict:
     return pickle.loads(decoded_string)
 
 
-def apply_joinedload(model, query: Query, expand: List[str]) -> Query:
+def apply_joinedload(model, query: QueryT, expand: List[str] | None) -> QueryT:
     if expand:
         for expandedProp in expand:
             query = query.options(joinedload(getattr(model, expandedProp)))
+
     return query
 
 
 def add_cursor_filter(
-    model: T,
+    model: Type[T],
     query,
-    after: str,
-    before: str,
-    sort_by: list[str],
-    orderAttr,
-    sort_order,
+    after: str | None,
+    before: str | None,
+    sort_by: list[str] | None,
+    orderAttr: Column,
+    sort_order: str | None,
     group: bool = False,
 ):
 
@@ -162,130 +171,154 @@ def process_paged_result(result, limit, before, after, sort_by=None):
     return result, before_cursor, after_cursor
 
 
-class Repository(Generic[T]):
-    def __init__(self, model: Type[T], session: Session):
+class AsyncRepository(Generic[T]):
+    def __init__(self, model: Type[T], session: AsyncSession):
         self.session = session
         self.model = model
 
-    def create(self, item: T, commit=True) -> T:
+    async def create_async(self, item: T, commit=True) -> T:
         self.session.add(item)
         if commit:
-            self.session.commit()
+            await self.session.commit()
         return item
 
-    def upsert(self, item: T, commit=True) -> T:
+    async def upsert_async(self, item: T, commit=True) -> T:
         try:
             self.session.add(item)
             if commit:
-                self.session.commit()
+                await self.session.commit()
         except IntegrityError:
-            self.session.rollback()
-            self.session.merge(item)
+            await self.session.rollback()
+            await self.session.merge(item)
             if commit:
-                self.session.commit()
+                await self.session.commit()
         return item
 
-    def get(self, item_id: int, tenant_id: int = None, expand: List[str] = None) -> T:
-        query = self.session.query(self.model).filter(self.model.id == item_id)
+    async def get_async(
+        self,
+        item_id: int,
+        tenant_id: Optional[int] = None,
+        expand: Optional[List[str]] = None,
+    ) -> T | None:
+        query = select(self.model).filter(self.model.id == item_id)
         if tenant_id:
             query = query.filter(self.model.tenant_id == tenant_id)
 
         query = apply_joinedload(self.model, query, expand)
 
-        item = query.first()
+        query = query.limit(1)
+
+        result = await self.session.execute(query)
+
+        item = result.scalar_one_or_none()
+
         return item
 
-    def contains_intersect(self, tenant_id, ids: List[Any] = []) -> List[Any]:
-        query = self.session.query(self.model)
+    async def contains_intersect_async(
+        self, tenant_id, ids: List[Any] = []
+    ) -> List[Any]:
+        query = select(self.model.id)
         if tenant_id:
             query = query.filter(self.model.tenant_id == tenant_id)
 
         query = query.filter(self.model.id.in_(ids))
-        query = query.with_entities(self.model.id)
 
-        result = query.all()
+        result = await self.session.execute(query)
+        all = result.fetchall()
 
-        return [item.id for item in result]
+        return [item.id for item in all]
 
-    def find_one(
-        self, *criterion: ColumnExpressionArgument[bool], expand: List[str] = None
-    ) -> T:
-        query = self.session.query(self.model)
+    async def find_one_async(
+        self, *criterion: ColumnExpressionArgument[bool], expand: List[str] | None = None
+    ) -> T | None:
+        query = select(self.model)
         query = query.filter(*criterion)
 
         query = apply_joinedload(self.model, query, expand)
 
-        item = query.first()
+        query = query.limit(1)
+        result = await self.session.execute(query)
+        item = result.scalar_one_or_none()
+
         return item
 
-    def find_all(
-        self, *criterion: ColumnExpressionArgument[bool], expand: List[str] = None
-    ) -> List[T]:
-        query = self.session.query(self.model)
+    async def find_all_async(
+        self, *criterion: ColumnExpressionArgument[bool], expand: List[str] | None = None
+    ) -> Sequence[T]:
+        query = select(self.model)
         if criterion:
             query = query.filter(*criterion)
 
         query = apply_joinedload(self.model, query, expand)
 
-        result = query.all()
-        return result
+        result = await self.session.execute(query)
+        return result.scalars().all()
 
-    def count(self, tenant_id: int, *criterion: ColumnExpressionArgument[bool]) -> int:
-        query = self.session.query(self.model)
+    async def count_async(
+        self, tenant_id: int, *criterion: ColumnExpressionArgument[bool]
+    ) -> int:
+        query = select(func.count()).select_from(self.model)
+
         query = query.filter(self.model.tenant_id == tenant_id)
         if criterion:
             query = query.filter(*criterion)
-        return query.count()
 
-    def _list_all(
+        result = await self.session.execute(query)
+        count = result.scalar_one()  # Extract the count
+        return count
+
+    async def _list_all_async(
         self,
-        buildQuery: Callable[[Query[any]], Query[any]],
-        builOrderAttr: Callable[[], any],
-        limit=None,
-        after=None,
-        before=None,
-        sort_by: str | None = None,
-        sort_order: str | None = None,
-        expand: List[str] | None = None,
+        buildQuery: Callable[[], QueryT],
+        buildOrderAttr: Callable[[], Column],
+        limit: Optional[int] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        sort_by: Optional[list[str]] = None,
+        sort_order: Optional[str] = None,
+        expand: Optional[List[str]] = None,
     ):
         if before is not None and after is not None:
             raise ValueError(
                 "Both 'before' and 'after' cannot be provided at the same time."
             )
 
-        query = self.session.query(self.model)
-        total_count = query.count()
-
-        query = buildQuery(query)
-        orderAttr = builOrderAttr()
+        query = buildQuery()
+        orderAttr = buildOrderAttr()
 
         query = apply_joinedload(self.model, query, expand)
 
-        query = add_cursor_filter[T](
+        query = add_cursor_filter(
             self.model, query, after, before, sort_by, orderAttr, sort_order
         )
 
         if limit:
             query = query.limit(limit + 1)
 
-        result = query.all()
+        result = await self.session.execute(query)
+        data = result.fetchall()
+        column_names = result.keys()
 
-        result = [item.to_dict() for item in result]
+        data = [dict(zip(column_names, row)) for row in data]
+        # data = [item.to_dict() for item in data]
 
-        result, before_cursor, after_cursor = process_paged_result(
-            result, limit, before, after
+        data, before_cursor, after_cursor = process_paged_result(
+            data, limit, before, after
         )
 
-        return PagedResult(result, total_count, before_cursor, after_cursor)
+        return PagedResult(data, 0, before_cursor, after_cursor)
 
-    def update(self, item: T) -> T:
-        self.session.merge(item)
-        self.session.commit()
-        item = self.session.query(self.model).get(item.id)
-        self.session.refresh(item)
-        return item
+    async def update_async(self, item: T) -> T | None:
+        await self.session.merge(item)
+        await self.session.commit()
+        updated_item = await self.session.get(self.model, item.id)
 
-    def delete(self, item_id: int) -> None:
-        item = self.session.query(self.model).filter(self.model.id == item_id).first()
-        self.session.delete(item)
-        self.session.commit()
+        if updated_item:
+            await self.session.refresh(updated_item)
+
+        return updated_item
+
+    async def delete_async(self, tenant_id: int, item_id: int) -> None:
+        item = await self.get_async(item_id, tenant_id)
+        await self.session.delete(item)
+        await self.session.commit()

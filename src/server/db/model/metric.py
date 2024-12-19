@@ -1,5 +1,6 @@
-from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String
+
+from db.repository.asyncRepository import AsyncRepository
 
 from . import Base
 
@@ -7,40 +8,50 @@ from . import Base
 class Metric(Base):
     __tablename__ = "metrics"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    tenant_id = Column(BigInteger, ForeignKey("tenants.id"))
-    tenant = relationship("Tenant", lazy=True)
-    enabled = Column(Boolean)
+    id = Column(BigInteger, primary_key=True)
     name = Column(String)
     source_type = Column(String)
-    hasPrDimension = Column(Boolean)
-    hasUserDimension = Column(Boolean)
-    hasOrgDimension = Column(Boolean)
-    customDimensions = Column(JSON, nullable=True)
+    structure = Column(JSON, nullable=True)
 
     def __init__(
         self,
         name,
-        tenant_id,
         source_type,
-        hasPrDimension,
-        hasUserDimension,
-        hasOrgDimension,
-        customDimensions=None,
-        enabled=True,
+        structure=None,
         id=None,
     ):
         self.id = id
-        self.tenant_id = tenant_id
         self.name = name
+        self.source_type = source_type
+        self.structure = structure
 
     def to_dict(self):
         return {
             "id": self.id,
-            "tenantId": self.tenant_id,
             "name": self.name,
+            "sourceType": self.source_type,
+            "structure": self.structure,
         }
 
 
-def setup_tenant_metrics(tenant, session):
-    pass
+PR_METRIC_ID: int = 1
+
+
+async def setup_tenant_metrics(session):
+    repo = AsyncRepository(Metric, session)
+    prMetric = await repo.find_one_async(Metric.name == "Pull Request")
+    if prMetric is None:
+        await repo.create_async(
+            Metric(
+                id=PR_METRIC_ID,
+                name="Pull Request",
+                source_type="github",
+                structure={
+                    "value1": "duration",
+                    "value2": "loc",
+                    "dimensions1": "github_user_id",
+                    "dimensions2": "repository_id",
+                },
+            )
+        )
+

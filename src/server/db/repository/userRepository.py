@@ -54,15 +54,13 @@ class UserRepository(Repository[User]):
 
     def list_all_reports(self, tenant_id: int, managerIds: List[int]):
         query = self.session.query(User)
-        query = query.filter(User.tenant_id == tenant_id)
-        query = query.filter(User.manager_id.in_(managerIds))
+        query = query.filter(User.tenant_id == tenant_id and User.manager_id.in_(managerIds))
         reporters = query.all()
         return reporters
 
     def list_all_managers(self, tenant_id):
         query = self.session.query(User)
-        query = query.filter(User.tenant_id == tenant_id)
-        query = query.filter(User.is_manager is True)
+        query = query.filter(User.tenant_id == tenant_id and User.is_manager.is_(True))
 
         users = query.all()
 

@@ -1,97 +1,101 @@
-# from sqlalchemy import create_engine
-# import app_config
-# from app_sql import get_sql_connection_string
-# from services.aiAgentService import AiAgentService
-# from sqlalchemy.orm import sessionmaker
-# import asyncio
+# import pygame
+
+# # pygame setup
+# pygame.init()
+# screen = pygame.display.set_mode((1280, 720))
+# clock = pygame.time.Clock()
+# running = True
+# dt = 0
 
 
-# if __name__ == '__main__':
-#     connection_string = get_sql_connection_string()
-
-#     engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
-#     Session = sessionmaker(bind=engine)
-#     session = Session()
-#     aiService = AiAgentService(session)
-
-#     asyncio.run(aiService._perform_pr_review_async(1, 49639210, {"pr_id": 2200763035}))
-
-# Example file showing a basic pygame "game loop"
-# Example file showing a circle moving on screen
-import pygame
-
-# pygame setup
-pygame.init()
-screen = pygame.display.set_mode((1280, 720))
-clock = pygame.time.Clock()
-running = True
-dt = 0
+# def check_for_exit():
+#     global running
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             running = False
 
 
-def check_for_exit():
-    global running
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+# class Dino:
+#     position = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
+#     velocity = 0
+
+#     def draw(self):
+#         # todo: render image
+#         pygame.draw.circle(screen, "red", self.position, 40)
+#         pygame.draw.circle(screen, "blue", self.position, 20)
+
+#     def jump(self):
+#         if self.velocity != 0:
+#             return
+
+#         self.velocity = -600  # initial jump velocity
+
+#     def update(self, dt):
+#         self.velocity += 981 * dt  # gravity
+#         self.position.y += self.velocity * dt
+
+#         # Check if dino has landed on the ground
+#         if self.position.y >= screen.get_height() / 2:
+#             self.position.y = screen.get_height() / 2
+#             self.velocity = 0
+
+#     def move_left(self, dt):
+#         self.position.x -= 300 * dt
+
+#     def move_right(self, dt):
+#         self.position.x += 300 * dt
 
 
-class Dino:
-    position = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
-    velocity = 0
+# max = Dino()
 
-    def draw(self):
-        # todo: render image
-        pygame.draw.circle(screen, "red", self.position, 40)
-        pygame.draw.circle(screen, "blue", self.position, 20)
+# while running:
 
-    def jump(self):
-        if self.velocity != 0:
-            return
+#     check_for_exit()
 
-        self.velocity = -600  # initial jump velocity
+#     # fill the screen with a color to wipe away anything from last frame
+#     screen.fill("purple")
 
-    def update(self, dt):
-        self.velocity += 981 * dt  # gravity
-        self.position.y += self.velocity * dt
+#     max.update(dt)
+#     max.draw()
 
-        # Check if dino has landed on the ground
-        if self.position.y >= screen.get_height() / 2:
-            self.position.y = screen.get_height() / 2
-            self.velocity = 0
+#     keys = pygame.key.get_pressed()
+#     if keys[pygame.K_SPACE]:
+#         max.jump()
+#     if keys[pygame.K_a]:
+#         max.move_left(dt)
+#     if keys[pygame.K_d]:
+#         max.move_right(dt)
 
-    def move_left(self, dt):
-        self.position.x -= 300 * dt
+#     # flip() the display to put your work on screen
+#     pygame.display.flip()
 
-    def move_right(self, dt):
-        self.position.x += 300 * dt
+#     # limits FPS to 60
+#     # dt is delta time in seconds since last frame, used for framerate-
+#     # independent physics.
+#     dt = clock.tick(60) / 1000
+
+# pygame.quit()
 
 
-max = Dino()
+import asyncio
+from app_sql import setup_async_sql_engine, setup_sql_engine
+from db.repository.asyncRepository import AsyncRepository
+from db.model.metric import Metric
+from db.repository.githubEventsRepository import GithubEventsRepository
+from services.githubWebhookService import GithubWebhookService
 
-while running:
+setup_sql_engine()
+Session = setup_async_sql_engine()
 
-    check_for_exit()
 
-    # fill the screen with a color to wipe away anything from last frame
-    screen.fill("purple")
+async def testrun():
+    async with Session() as session:
+        ws = GithubWebhookService(session, inprocess=True)
+        er = GithubEventsRepository()
+        event = er.get(1, "1b32ba54-bc87-11ef-99eb-31dedd3f9757")
+        data = event['data']
+        await ws.record_event_async("issue", "1b32ba54-bc87-11ef-99eb-31dedd3f9757", data)
+        print("done")
 
-    max.update(dt)
-    max.draw()
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_SPACE]:
-        max.jump()
-    if keys[pygame.K_a]:
-        max.move_left(dt)
-    if keys[pygame.K_d]:
-        max.move_right(dt)
-
-    # flip() the display to put your work on screen
-    pygame.display.flip()
-
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
-    dt = clock.tick(60) / 1000
-
-pygame.quit()
+asyncio.run(testrun())

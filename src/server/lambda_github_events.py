@@ -1,39 +1,37 @@
+import asyncio
 import json
 import logging
 import base64
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from services.githubWebhookService import GithubWebhookService
-import app_config
-from app_sql import get_sql_connection_string
+from app_sql import setup_async_sql_engine
 from app_logger import logger
+
+AsyncSession = setup_async_sql_engine()
 
 
 def handler(event, context):
-    logger.info("Started import handler")
+    asyncio.run(handler_async(event, context))
+
+
+async def handler_async(event, context):
+    logger.info("Started async event handler")
+
     try:
-        connection_string = get_sql_connection_string()
+        async with AsyncSession() as session:
+            githubService = GithubWebhookService(session)
 
-        engine = create_engine(connection_string, echo=app_config.DEBUG_SQL)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        githubService = GithubWebhookService(session)
+            for event in event["Records"]:
+                data = event["kinesis"]["data"]
+                bodyStr = base64.b64decode(data).decode("utf-8")
+                logging.info("Trigger processed an event: %s", bodyStr)
+                body = json.loads(bodyStr)
 
-        for event in event["Records"]:
-            data = event["kinesis"]["data"]
-            bodyStr = base64.b64decode(data).decode("utf-8")
-            logging.info("Trigger processed an event: %s", bodyStr)
-            body = json.loads(bodyStr)
+                await githubService.process_event_async(
+                    body["event_type"], body["delivery_id"], body["data"]
+                )
 
-            githubService.process_event(
-                body["event_type"], body["delivery_id"], body["data"]
-            )
-        session.commit()
+            await session.commit()
     except Exception as e:
-        session.rollback()
         logging.error("Error processing event: %s", e)
-        # raise
-    finally:
-        session.close()
 
-    logger.info("Ended import handler")
+    logger.info("Ended async event handler")

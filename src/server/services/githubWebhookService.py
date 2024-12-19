@@ -1,23 +1,25 @@
 from datetime import datetime
 import logging
 
-from cachetools import TTLCache, cached
+from async_lru import alru_cache
 from db.model.githubIssue import GithubIssue
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.model import (
     PullRequest,
-    GithubEvent,
     GithubRepo,
     GithubOrg,
     GithubInstallation,
-    GithubUser,
     GithubIssueComment,
     GithubPullRequestReviewComment,
     GithubPullRequestReview,
+    Tenant,
 )
-from db.repository.repository import Repository
 from events.producer import publish_to_kinesis
 from db.model.repoSettings import RepoSettings
+from db.repository.githubEventsRepository import GithubEventsRepository
+from db.repository.asyncRepository import AsyncRepository
+from db.model.metricValue import create_pr_metric_value
 from services.aiAgentService import AiAgentService
 from services.githubImportService import GithubImportService
 from utils import log_exceptions
@@ -33,114 +35,115 @@ from services.githubClient import github_gql_query
 import app_config
 from app_logger import logger
 
-tenant_cache = TTLCache(maxsize=10000, ttl=300000)
-
 
 class GithubWebhookService:
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession, inprocess=False):
         self.session = session
-        self.userRepository = Repository(GithubUser, session)
+        self.inprocess = inprocess
 
     @log_exceptions(log_args=True)
-    def record_event(self, event_type, deliveryId, data):
+    async def record_event_async(self, event_type, deliveryId, data):
         body = {"data": data, "event_type": event_type, "delivery_id": deliveryId}
 
-        publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), body)
+        if self.inprocess:
+            await self.process_event_async(event_type, deliveryId, data)
+        else:
+            publish_to_kinesis(app_config.EVENTS_STREAM_ARN, str(deliveryId), body)
 
-    def process_event(self, event_type, deliveryId, data):
-        eventRepo = Repository(GithubEvent, self.session)
-
-        if (
-            eventRepo.find_one(
-                GithubEvent.delivery_id == deliveryId, GithubEvent.failed is False
-            )
-            is not None
-        ):
-            return
+    async def process_event_async(self, event_type, deliveryId, data):
+        eventRepo = GithubEventsRepository()
 
         installationId = data["installation"]["id"]
 
+        tenant = await self._get_tenant_for_installation_async(installationId)
+        if not tenant:
+            logging.error(f"Tenant not found for installation {installationId}")
+            return
+
         try:
             if event_type == "issue_comment":
-                self.process_issue_comment(data)
+                await self.process_issue_comment_async(data)
             elif event_type == "pull_request":
-                self.process_pull_request(data)
+                await self.process_pull_request_async(data)
             elif event_type == "pull_request_review_comment":
-                self.process_pull_request_review_comment(data)
+                await self.process_pull_request_review_comment_async(data)
             elif event_type == "pull_request_review":
-                self.process_pull_request_review(data)
+                await self.process_pull_request_review_async(data)
             elif event_type == "installation":
-                self.process_installation(data)
+                await self.process_installation_async(data)
             elif event_type == "installation_repositories":
-                self.process_installation_repositories(data)
+                await self.process_installation_repositories_async(data)
             elif event_type == "issues":
-                self.process_issues(data)
+                await self.process_issues_async(data)
 
-            eventRepo.create(
-                GithubEvent(
-                    installation_id=installationId,
-                    received_at=datetime.utcnow(),
-                    delivery_id=deliveryId,
-                    data=data,
-                )
+            eventRepo.insert(
+                tenant_id=tenant.id,
+                event_type=event_type,
+                delivery_id=deliveryId,
+                data=data,
+                received_at=datetime.now(datetime.timezone.utc),
             )
+
         except Exception as e:
             logging.error(
                 f"Failed to process event {event_type} for installation {installationId}, error: {e}"
             )
-            eventRepo.create(
-                GithubEvent(
-                    installation_id=installationId,
-                    data=data,
-                    received_at=datetime.utcnow(),
-                    failed=True,
-                    error_text=str(e),
-                    delivery_id=deliveryId,
-                )
+
+            eventRepo.insert(
+                tenant_id=tenant.id,
+                delivery_id=deliveryId,
+                event_type=event_type,
+                data=data,
+                error_text=str(e),
+                failed=True,
+                received_at=datetime.now(datetime.timezone.utc),
             )
 
         return True
 
-    @cached(tenant_cache)
-    def _get_tenant_for_installation(self, installation_id):
-        instRepository = Repository(GithubInstallation, self.session)
-        inst = instRepository.find_one(
-            GithubInstallation.installation_id == installation_id
+    # @cached(tenant_cache)
+    @alru_cache(maxsize=32)
+    async def _get_tenant_for_installation_async(self, installation_id):
+        instRepository = AsyncRepository(GithubInstallation, self.session)
+        inst = await instRepository.find_one_async(
+            GithubInstallation.installation_id == installation_id,
+            expand=["tenant"],
         )
+
         return inst.tenant if inst else None
 
-    def process_issue_comment(self, data):
+    async def process_issue_comment_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
+        tenant = await self._get_tenant_for_installation_async(installationId)
         action = data["action"]
 
-        commentRepo = Repository(GithubIssueComment, self.session)
+        commentRepo = AsyncRepository(GithubIssueComment, self.session)
 
         if action == "created" or action == "edited":
             commentRecord = issue_comment_to_model(tenant, data)
-            commentRepo.upsert(commentRecord)
+            await commentRepo.upsert_async(commentRecord)
         elif action == "deleted":
-            commentRepo.delete(data["comment"]["id"])
+            await commentRepo.delete_async(data["comment"]["id"])
 
-    def process_installation(self, data):
+    async def process_installation_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
+        tenant = await self._get_tenant_for_installation_async(installationId)
 
         if not tenant:
             logging.error(f"Tenant not found for installation {installationId}")
             return
 
-        repoRepository = Repository(GithubRepo, self.session)
-        orgRepository = Repository(GithubOrg, self.session)
-        instRepository = Repository(GithubInstallation, self.session)
+        repoRepository = AsyncRepository(GithubRepo, self.session)
+        orgRepository = AsyncRepository(GithubOrg, self.session)
+        instRepository = AsyncRepository(GithubInstallation, self.session)
 
         orgJson = data["installation"]["account"]
         org_id = orgJson["id"]
 
-        inst = instRepository.find_one(
+        inst = await instRepository.find_one_async(
             GithubInstallation.installation_id == installationId
         )
-        org = orgRepository.get(org_id, tenant_id=tenant.id)
+        org = await orgRepository.get_async(org_id, tenant_id=tenant.id)
 
         if data["action"] == "created":
 
@@ -155,39 +158,43 @@ class GithubWebhookService:
                     installation_id=installationId,
                     type=orgJson["type"],
                 )
-                orgRepository.upsert(org)
+                await orgRepository.upsert_async(org)
                 inst.org_id = org_id
-                instRepository.update(inst)
+                await instRepository.update_async(inst)
 
             for repo in data["repositories"]:
-                repoRepository.upsert(repository_to_model(tenant, org, repo))
+                await repoRepository.upsert_async(
+                    repository_to_model(tenant, org, repo)
+                )
 
             GithubImportService(self.session).create_import_request(tenant, org)
         elif data["action"] == "deleted":
             if inst:
-                org = orgRepository.get(inst.org_id)
+                org = await orgRepository.get_async(inst.org_id)
                 org.deleted = True
-                orgRepository.update(org)
+                await orgRepository.update_async(org)
                 inst.deleted = True
-                instRepository.update(inst)
+                await instRepository.update_async(inst)
 
-    def process_installation_repositories(self, data):
+    async def process_installation_repositories_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
-        repoRepository = Repository(GithubRepo, self.session)
-        orgRepository = Repository(GithubOrg, self.session)
+        tenant = await self._get_tenant_for_installation_async(installationId)
+        repoRepository = AsyncRepository(GithubRepo, self.session)
+        orgRepository = AsyncRepository(GithubOrg, self.session)
 
-        org = orgRepository.find_one(GithubOrg.installation_id == installationId)
+        org = await orgRepository.find_one_async(
+            GithubOrg.installation_id == installationId
+        )
 
         for repo in data["repositories_added"]:
-            repoRepository.upsert(repository_to_model(tenant, org, repo))
+            await repoRepository.upsert_async(repository_to_model(tenant, org, repo))
 
         for repo in data["repositories_removed"]:
-            repo = repoRepository.get(repo["id"])
+            repo = await repoRepository.get_async(repo["id"])
             repo.deleted = True
-            repoRepository.update(repo)
+            await repoRepository.update_async(repo)
 
-    def process_pull_request(self, data):
+    async def process_pull_request_async(self, data):
         logger.info("Processing pull request event")
 
         action = data["action"]
@@ -228,18 +235,18 @@ class GithubWebhookService:
         # if not (action == "closed" or action == "opened"):
         #     return
 
-        tenant = self._get_tenant_for_installation(installation_id)
+        tenant = await self._get_tenant_for_installation_async(installation_id)
         prRecord = pull_request_event_to_model(tenant, data)
         logger.info(f"Processing pull request {prRecord.url}")
 
         prRecord.first_commit_date = firstCommitDate
         prRecord.first_commit_message = firstCommitMessage
 
-        settinsRepo = Repository(RepoSettings, self.session)
-        prRepo = Repository(PullRequest, self.session)
-        orgRepo = Repository(GithubOrg, self.session)
-        repoRepo = Repository(GithubRepo, self.session)
-        repo = repoRepo.get(prRecord.repository_id, tenant.id)
+        settinsRepo = AsyncRepository(RepoSettings, self.session)
+        prRepo = AsyncRepository(PullRequest, self.session)
+        orgRepo = AsyncRepository(GithubOrg, self.session)
+        repoRepo = AsyncRepository(GithubRepo, self.session)
+        repo = await repoRepo.get_async(prRecord.repository_id, tenant.id)
         if repo is None:
             logger.info(
                 f"Repository not found for tenant {tenant.id} and repository {prRecord.repository_id}"
@@ -250,7 +257,7 @@ class GithubWebhookService:
         logger.info(
             f"Requset settings for tenant {tenant.id} and repository {prRecord.repository_id}"
         )
-        settings = settinsRepo.find_one(
+        settings = await settinsRepo.find_one_async(
             RepoSettings.repository_id == prRecord.repository_id
             and RepoSettings.tenant_id == tenant.id
         )
@@ -269,13 +276,15 @@ class GithubWebhookService:
             )
             return
 
-        org = orgRepo.get(prRecord.org_id, tenant.id)
+        org = await orgRepo.get_async(prRecord.org_id, tenant.id)
         if org is None:
             return
 
-        oldPr = prRepo.get(prRecord.id, tenant.id)
+        oldPr = await prRepo.get_async(prRecord.id, tenant.id)
 
-        prRepo.upsert(prRecord)
+        await prRepo.upsert_async(prRecord)
+
+        await self._calculate_pr_metrics_async(tenant, prRecord)
 
         if settings and settings.review_prompt:
             if oldPr and oldPr.title == prRecord.title and oldPr.body == prRecord.body:
@@ -292,55 +301,76 @@ class GithubWebhookService:
         if not (action == "opened"):
             return
 
-    def process_pull_request_review_comment(self, data):
+    async def process_pull_request_review_comment_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
+        tenant = await self._get_tenant_for_installation_async(installationId)
         action = data["action"]
 
-        commentRepo = Repository(GithubPullRequestReviewComment, self.session)
+        commentRepo = AsyncRepository(GithubPullRequestReviewComment, self.session)
 
         if action == "created" or action == "edited":
             commentRecord = pull_request_review_comment_to_model(tenant, data)
-            commentRepo.upsert(commentRecord)
+            await commentRepo.upsert_async(commentRecord)
         elif action == "deleted":
-            commentRepo.delete(data["comment"]["id"])
+            await commentRepo.delete_async(data["comment"]["id"])
 
-    def process_pull_request_review(self, data):
+    async def process_pull_request_review_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
+        tenant = await self._get_tenant_for_installation_async(installationId)
         action = data["action"]
         review = data["review"]
-        reviewRepo = Repository(GithubPullRequestReview, self.session)
+        reviewRepo = AsyncRepository(GithubPullRequestReview, self.session)
 
         if action == "submitted" or action == "edited":
             reviewRecord = pull_request_review_to_model(tenant, data)
-            reviewRepo.upsert(reviewRecord)
+            await reviewRepo.upsert_async(reviewRecord)
 
         elif action == "dismissed":
-            review = reviewRepo.get(review["id"])
+            review = await reviewRepo.get_async(review["id"])
             review.state = "dismissed"
-            reviewRepo.update(review)
+            await reviewRepo.update_async(review)
 
-    def process_issues(self, data):
+    async def process_issues_async(self, data):
         installationId = data["installation"]["id"]
-        tenant = self._get_tenant_for_installation(installationId)
+        tenant = await self._get_tenant_for_installation_async(installationId)
         action = data["action"]
         issue = data["issue"]
-        issueRepo = Repository(GithubIssue, self.session)
+        issueRepo = AsyncRepository(GithubIssue, self.session)
 
         if action == "opened" or action == "edited" or action == "reopened":
             issueRecord = issue_to_model(tenant, data)
-            issueRepo.upsert(issueRecord)
+            await issueRepo.upsert_async(issueRecord)
         elif action == "closed":
-            issueRecord = issueRepo.get(issue["id"])
+            issueRecord = await issueRepo.get_async(issue["id"])
             if issueRecord is None:
                 issueRecord = issue_to_model(tenant, data)
-                issueRepo.upsert(issueRecord)
+                await issueRepo.upsert_async(issueRecord)
                 return
             issueRecord.state = "closed"
             issue.closed_at = datetime.utcnow()
-            issueRepo.update(issueRecord)
+            await issueRepo.update_async(issueRecord)
         elif action == "assigned":
             pass
         elif action == "deleted":
-            issueRepo.delete(issue["id"])
+            await issueRepo.delete_async(issue["id"])
+
+    async def _calculate_pr_metrics_async(
+        self, tenant: Tenant, pr: PullRequest
+    ):
+        if pr.state != "merged":
+            return
+
+        duration = pr.closed_at - pr.created_at
+
+        metric = create_pr_metric_value(
+            tenant.id,
+            duration.total_seconds() / 3600,
+            pr.additions + pr.deletions,
+            pr.id,
+            pr.author_id,
+            pr.repository_id,
+        )
+
+        self.session.add(metric)
+
+        pass

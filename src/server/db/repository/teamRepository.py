@@ -1,41 +1,58 @@
+from typing import Optional
+
+from sqlalchemy import select
 from db.model.team import Team
 from db.model.pagedResult import PagedResult
 from db.repository.repository import process_paged_result
 from sqlalchemy.orm import aliased
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.repository.asyncRepository import AsyncRepository
 
 
-# Create the team repository class
-class TeamRepository:
-    def __init__(self, session):
-        self.session = session
+class TeamRepository(AsyncRepository[Team]):
+    def __init__(self, session: AsyncSession):
+        super().__init__(Team, session)
 
-    def create_team(self, team):
-        self.session.add(team)
-        self.session.commit()
-        return team
-
-    def get_team(self, team_id):
-        team = self.session.query(Team).filter_by(id=team_id).first()
-        return team
-
-    def update_team(self, team):
-        self.session.merge(team)
-        self.session.commit()
-        return team
-
-    def delete_team(self, team_id):
-        team = self.session.query(Team).filter_by(id=team_id).first()
-        self.session.delete(team)
-        self.session.commit()
-
-    def list_all(
+    async def list_all_async(
         self,
         tenant_id: int,
-        limit: int = None,
-        after=None,
-        before=None,
-        order_by: str = None,
-    ) -> list[Team]:
+        limit: Optional[int] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        order_by: Optional[str] = None,
+        sort_order="asc",
+    ) -> PagedResult[Team]:
+
+        def build_query():
+            ParentTeam = aliased(Team)
+
+            query = select(
+                Team.id,
+                Team.name,
+                Team.parent_id,
+                Team.github_team_id,
+                Team.tags,
+                ParentTeam.name.label("parentName"),
+            )
+
+            query = query.filter(Team.tenant_id == tenant_id)
+            query = query.outerjoin(ParentTeam, Team.parent_id == ParentTeam.id)
+            return query
+
+        def build_order():
+            return Team.id
+
+        return await super()._list_all_async(
+            build_query,
+            build_order,
+            limit,
+            after,
+            before,
+            sort_by=order_by,
+            sort_order=sort_order,
+        )
+
         try:
             if before is not None and after is not None:
                 raise ValueError(
@@ -80,3 +97,4 @@ class TeamRepository:
             return PagedResult(result, total_count, before_cursor, after_cursor)
         except Exception as error:
             print("Error while listing git_stats:", error)
+            raise error
