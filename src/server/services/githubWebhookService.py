@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from async_lru import alru_cache
@@ -81,7 +81,7 @@ class GithubWebhookService:
                 event_type=event_type,
                 delivery_id=deliveryId,
                 data=data,
-                received_at=datetime.now(datetime.timezone.utc),
+                received_at=datetime.now(timezone.utc),
             )
 
         except Exception as e:
@@ -96,21 +96,23 @@ class GithubWebhookService:
                 data=data,
                 error_text=str(e),
                 failed=True,
-                received_at=datetime.now(datetime.timezone.utc),
+                received_at=datetime.now(timezone.utc),
             )
 
         return True
 
-    # @cached(tenant_cache)
     @alru_cache(maxsize=32)
-    async def _get_tenant_for_installation_async(self, installation_id):
+    async def _get_tenant_for_installation_async(self, installation_id) -> Tenant | None:
         instRepository = AsyncRepository(GithubInstallation, self.session)
         inst = await instRepository.find_one_async(
             GithubInstallation.installation_id == installation_id,
             expand=["tenant"],
         )
 
-        return inst.tenant if inst else None
+        tenant = inst.tenant if inst else None
+        self.session.expunge(tenant)
+
+        return tenant
 
     async def process_issue_comment_async(self, data):
         installationId = data["installation"]["id"]
@@ -123,7 +125,7 @@ class GithubWebhookService:
             commentRecord = issue_comment_to_model(tenant, data)
             await commentRepo.upsert_async(commentRecord)
         elif action == "deleted":
-            await commentRepo.delete_async(data["comment"]["id"])
+            await commentRepo.delete_async(tenant.id, int(data["comment"]["id"]))
 
     async def process_installation_async(self, data):
         installationId = data["installation"]["id"]
@@ -296,7 +298,7 @@ class GithubWebhookService:
                 f"Creating PR review request for tenant {tenant.id} and repository {prRecord.repository_id}"
             )
             aiAgetService = AiAgentService(self.session)
-            aiAgetService.create_pr_review_request(tenant, org, prRecord.id)
+            await aiAgetService.create_pr_review_request_async(tenant, org, prRecord.id)
 
         if not (action == "opened"):
             return

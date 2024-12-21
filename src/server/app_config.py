@@ -12,7 +12,7 @@ ISSUER = os.getenv("ISSUER")
 HOT_RELOAD: bool = bool(os.getenv("HOT_RELOAD", False))
 
 DEBUG = os.getenv("DEBUG", False)
-DEBUG_SQL = os.getenv("DEBUG_SQL", False)
+DEBUG_SQL = bool(os.getenv("DEBUG_SQL", False))
 
 
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN", "dev-emlab.uk.auth0.com")

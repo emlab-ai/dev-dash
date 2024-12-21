@@ -78,6 +78,7 @@
 
 
 import asyncio
+import json
 from app_sql import setup_async_sql_engine, setup_sql_engine
 from db.repository.asyncRepository import AsyncRepository
 from db.model.metric import Metric
@@ -92,9 +93,9 @@ async def testrun():
     async with Session() as session:
         ws = GithubWebhookService(session, inprocess=True)
         er = GithubEventsRepository()
-        event = er.get(1, "1b32ba54-bc87-11ef-99eb-31dedd3f9757")
+        event = er.get(1, "3cdb19c2-bee3-11ef-8be6-708ffbfa36b7")
         data = event['data']
-        await ws.record_event_async("issue", "1b32ba54-bc87-11ef-99eb-31dedd3f9757", data)
+        await ws.record_event_async("issue_comment", "3cdb19c2-bee3-11ef-8be6-708ffbfa36b7", data)
         print("done")
 
 

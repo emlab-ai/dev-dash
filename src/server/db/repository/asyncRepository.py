@@ -320,5 +320,6 @@ class AsyncRepository(Generic[T]):
 
     async def delete_async(self, tenant_id: int, item_id: int) -> None:
         item = await self.get_async(item_id, tenant_id)
-        await self.session.delete(item)
-        await self.session.commit()
+        if item:
+            await self.session.delete(item)
+            await self.session.commit()

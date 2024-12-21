@@ -1,19 +1,16 @@
 import json
-from db.model.githubOrg import GithubOrg
-from db.model.githubRepo import GithubRepo
-from db.model.githubUser import GithubUser
 from db.model.pullRequest import PullRequest
-from db.model.tenant import Tenant
-from db.repository.repository import Repository
 from events.producer import publish_to_kinesis
 from db.model.repoSettings import RepoSettings
 from ai.vertexClient import setup_vertex_client
 from db.model.pullRequestAiReviewResult import PullRequestAiReviewResult
+from db.repository.asyncRepository import AsyncRepository
 from services.githubClient import write_pr_comment
 from utils import log_exceptions
 import app_config
 from app_logger import logger
 from vertexai.generative_models import GenerativeModel
+
 
 system_pr_review_prompt = """
 <OBJECTIVE_AND_PERSONA>
@@ -102,13 +99,9 @@ async def _run_gemini_request_async(system_prompt: str, prompt: str) -> tuple:
 class AiAgentService:
     def __init__(self, session, inprocess=False):
         self.session = session
-        self.userRepository = Repository(GithubUser, session)
-        self.repoRepository = Repository(GithubRepo, session)
-        self.orgRepository = Repository(GithubOrg, session)
-        self.tenantRepository = Repository(Tenant, session)
-        self.prRepository = Repository(PullRequest, session)
-        self.reposSettingsRepository = Repository(RepoSettings, session)
-        self.resultRepository = Repository(PullRequestAiReviewResult, session)
+        self.prRepository = AsyncRepository(PullRequest, session)
+        self.reposSettingsRepository = AsyncRepository(RepoSettings, session)
+        self.resultRepository = AsyncRepository(PullRequestAiReviewResult, session)
         self.inprocess = inprocess
 
     async def process_event_async(self, event):
@@ -120,9 +113,9 @@ class AiAgentService:
         if event_type == "pr_review_request":
             await self._perform_pr_review_async(tenant_id, installation_id, data)
 
-    def send_event(self, event_type, tenant_id, installation_id, data):
+    async def send_event_async(self, event_type, tenant_id, installation_id, data):
         if self.inprocess:
-            self.process_event(
+            await self.process_event_async(
                 {
                     "event_type": event_type,
                     "tenant_id": tenant_id,
@@ -143,21 +136,22 @@ class AiAgentService:
             )
 
     @log_exceptions(log_args=True)
-    def create_pr_review_request(self, tenant, org, pr_id):
-        self.send_event(
+    async def create_pr_review_request_async(self, tenant, org, pr_id):
+        await self.send_event_async(
             "pr_review_request", tenant.id, org.installation_id, {"pr_id": pr_id}
         )
 
     async def _perform_pr_review_async(self, tenant_id, installation_id, data):
         pr_id = data["pr_id"]
-        pr = self.prRepository.get(pr_id, tenant_id)
+        pr = await self.prRepository.get_async(pr_id, tenant_id)
         repository_id = pr.repository_id
         node_id = pr.node_id
 
-        repoSettings = self.reposSettingsRepository.find_one(
+        repoSettings = await self.reposSettingsRepository.find_one_async(
             RepoSettings.repository_id == repository_id
             and RepoSettings.tenant_id == tenant_id
         )
+
         if not repoSettings:
             logger.info(
                 f"Repository settings not found for tenant {tenant_id} and repository {repository_id}"
@@ -206,4 +200,4 @@ class AiAgentService:
             score=reviewObject["quality_value"],
             tokens_used=tokens_used,
         )
-        self.resultRepository.upsert(result)
+        await self.resultRepository.upsert_async(result)

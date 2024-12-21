@@ -1,8 +1,16 @@
+from datetime import datetime
 from db.model import PullRequest
 from db.model import GithubIssueComment
 from db.model import GithubPullRequestReview, GithubRepo
 from db.model import GithubPullRequestReviewComment
 from db.model.githubIssue import GithubIssue
+
+
+def parse_date_time(value) -> datetime | None:
+    if (value is None) or (value == ""):
+        return None
+
+    return datetime.fromisoformat(value).replace(tzinfo=None)
 
 
 def pull_request_event_to_model(tenant, data) -> PullRequest:
@@ -19,20 +27,22 @@ def pull_request_event_to_model(tenant, data) -> PullRequest:
         number=pull_request["number"],
         org_id=organization["id"],
         repository_id=repository["id"],
-        closed_at=pull_request["merged_at"] or pull_request["closed_at"],
-        created_at=pull_request["created_at"],
-        changed_files=pull_request["changed_files"],
-        deletions=pull_request["deletions"],
-        additions=pull_request["additions"],
+        closed_at=parse_date_time(
+            pull_request["merged_at"] or pull_request["closed_at"]
+        ),
+        created_at=parse_date_time(pull_request["created_at"]),
+        changed_files=pull_request["changed_files"] if "changed_files" in pull_request else None,
+        deletions=pull_request["deletions"] if "deletions" in pull_request else None,
+        additions=pull_request["additions"] if "additions" in pull_request else None,
         body=pull_request["body"],
         title=pull_request["title"],
-        commits_count=pull_request["commits"],
+        commits_count=pull_request["commits"] if "commits" in pull_request else None,
         first_commit_message=None,
         first_commit_date=None,
-        review_threads_count=pull_request["review_comments"],
-        comments_count=pull_request["comments"],
+        review_threads_count=pull_request["review_comments"] if "review_comments" in pull_request else None,
+        comments_count=pull_request["comments"] if "comments" in pull_request else None,
         url=pull_request["html_url"],
-        state=pull_request["state"] if not bool(pull_request["merged"]) else "merged",
+        state=pull_request["state"] if not bool(pull_request["merged"] if "merged" in pull_request else False) else "merged",
     )
 
 
@@ -48,8 +58,8 @@ def issue_comment_to_model(tenant, data) -> GithubIssueComment:
         author=comment["user"]["login"],
         author_id=comment["user"]["id"],
         node_id=comment["node_id"],
-        created_at=comment["created_at"],
-        updated_at=comment["updated_at"],
+        created_at=parse_date_time(comment["created_at"]),
+        updated_at=parse_date_time(comment["updated_at"]),
         author_association=comment["author_association"],
         body=comment["body"],
         org_id=organization["id"],
@@ -73,7 +83,7 @@ def pull_request_review_to_model(tenant, data) -> GithubPullRequestReview:
         author_id=review["user"]["id"],
         author=review["user"]["login"],
         state=review["state"],
-        submitted_at=review["submitted_at"],
+        submitted_at=parse_date_time(review["submitted_at"]),
         body=review["body"],
         repo_id=repository["id"],
         pr_id=pull_request["id"],
@@ -102,8 +112,8 @@ def pull_request_review_comment_to_model(
         author=comment["user"]["login"],
         author_id=comment["user"]["id"],
         reactions_count=comment["reactions"]["total_count"],
-        created_at=comment["created_at"],
-        updated_at=comment["updated_at"],
+        created_at=parse_date_time(comment["created_at"]),
+        updated_at=parse_date_time(comment["updated_at"]),
         pr_id=pull_request["id"],
         pr_number=pull_request["number"],
         repo_id=repository["id"],
@@ -137,9 +147,9 @@ def issue_to_model(tenant, data) -> GithubIssue:
         state=data["issue"]["state"],
         locked=data["issue"]["locked"],
         comments=data["issue"]["comments"],
-        created_at=data["issue"]["created_at"],
-        updated_at=data["issue"]["updated_at"],
-        closed_at=data["issue"]["closed_at"],
+        created_at=parse_date_time(data["issue"]["created_at"]),
+        updated_at=parse_date_time(data["issue"]["updated_at"]),
+        closed_at=parse_date_time(data["issue"]["closed_at"]),
         author_association=data["issue"]["author_association"],
         body=data["issue"]["body"],
         org_id=data["organization"]["id"],

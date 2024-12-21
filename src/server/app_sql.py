@@ -1,19 +1,15 @@
-import asyncio
 import app_config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from db.model import Base
 from aws.secret import get_aws_secret
 import json
 
-from db.model.metric import setup_tenant_metrics
-
 
 def setup_sql_engine():
     connection_string = get_sql_connection_string()
-    # app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
     engine = create_engine(
         connection_string,
         pool_size=5,
@@ -28,7 +24,7 @@ def setup_sql_engine():
     return Session
 
 
-async def setup_async_sql_engine():
+def setup_async_sql_engine():
     connection_string = get_sql_connection_string(is_async=True)
     async_engine = create_async_engine(
         connection_string,
@@ -39,8 +35,8 @@ async def setup_async_sql_engine():
         echo=app_config.DEBUG_SQL,
     )
 
-    Session = sessionmaker(
-        bind=async_engine, class_=AsyncSession, expire_on_commit=False
+    Session = async_sessionmaker(
+        bind=async_engine, expire_on_commit=False
     )
 
     return Session

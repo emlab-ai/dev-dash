@@ -19,5 +19,19 @@
     "python.analysis.exclude": [
         "**/venv/**",
         "**/__pycache__/**"
-    ]
+    ],
+    "python.envFile": "${workspaceFolder}/server/.env",
+    "python.analysis.extraPaths": [
+        "./server",
+        "./tests"
+    ],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false
 }

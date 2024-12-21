@@ -23,12 +23,17 @@ class GithubRepo(Base):
 
     tenant = relationship("Tenant", lazy=True)
     github_org = relationship("GithubOrg", lazy=True)
-    # __table_args__ = (
-    #     ForeignKeyConstraint(['org_id', 'tenant_id'], ['github_orgs.id', 'github_orgs.tenant_id']),
-    # )
 
     def __init__(
-        self, id, tenant_id, org_id, node_id, name, full_name, private, deleted=False
+        self,
+        id: int,
+        tenant_id: int,
+        org_id: int,
+        node_id: str,
+        name,
+        full_name: str,
+        private: bool = False,
+        deleted=False,
     ):
         self.id = id
         self.tenant_id = tenant_id

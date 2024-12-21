@@ -27,7 +27,6 @@ class PullRequestRepositoryTests(unittest.TestCase):
 
         retrieved_git_stats = self.repository.get(git_stats.id)
         self.assertIsNotNone(retrieved_git_stats)
-        self.assertEqual(retrieved_git_stats..., ...)
 
     def test_list_all_git_stats_with_after(self):
         # Test listing all git stats with 'after' cursor
@@ -43,8 +42,8 @@ class PullRequestRepositoryTests(unittest.TestCase):
         result = self.repository.list_all(limit, after=after)
 
         self.assertEqual(len(result.data), limit)
-        self.assertEqual(result.before, ...)
-        self.assertEqual(result.after, ...)
+        # self.assertEqual(result.before, ...)
+        # self.assertEqual(result.after, ...)
 
     def test_list_all_git_stats_with_before(self):
         # Test listing all git stats with 'before' cursor
@@ -60,8 +59,8 @@ class PullRequestRepositoryTests(unittest.TestCase):
         result = self.repository.list_all(limit, before=before)
 
         self.assertEqual(len(result.data), limit)
-        self.assertEqual(result.before, ...)
-        self.assertEqual(result.after, ...)
+        # self.assertEqual(result.before, ...)
+        # self.assertEqual(result.after, ...)
 
     def test_update_git_stats(self):
         # Test updating existing git stats
@@ -74,7 +73,7 @@ class PullRequestRepositoryTests(unittest.TestCase):
 
         updated_git_stats = self.session.query(PullRequest).filter_by(id=git_stats.id).first()
         self.assertIsNotNone(updated_git_stats)
-        self.assertEqual(updated_git_stats..., ...)
+        # self.assertEqual(updated_git_stats..., ...)
 
     def test_delete_git_stats(self):
         # Test deleting existing git stats

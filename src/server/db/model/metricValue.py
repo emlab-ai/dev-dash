@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 from sqlalchemy import JSON, BigInteger, Column, DateTime, Float, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
@@ -48,4 +48,4 @@ def create_pr_metric_value(tenant_id, duration, loc, pr_id, github_user_id, repo
             dimension1=github_user_id,
             dimension2=repository_id,
             source_id=pr_id,
-            reported_at=datetime.now(datetime.timezone.utc))
+            reported_at=datetime.now(timezone.utc))

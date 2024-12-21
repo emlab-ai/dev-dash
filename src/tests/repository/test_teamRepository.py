@@ -1,59 +1,82 @@
+import asyncio
 import unittest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from db.repository import TeamRepository
+
+from sqlalchemy import delete
+from tests.baseIntegrationTest import BaseIntegrationTest
 from db.model import Team
+from db.repository import TeamRepository
 
-class TeamRepositoryTests(unittest.TestCase):
-    def setUp(self):
-        # Create an in-memory SQLite database for testing
-        self.engine = create_engine('sqlite:///:memory:')
-        Team.metadata.create_all(self.engine)
-        self.session = sessionmaker(bind=self.engine)()
-        self.repository = TeamRepository(self.session)
 
-    def tearDown(self):
-        # Close the database connection after each test
-        self.session.close()
-        self.engine.dispose()
+class TeamRepositoryTests(BaseIntegrationTest):
 
-    def test_create_team(self):
+    async def test_create_async(self):
+        repository = TeamRepository(self.session)
         # Test creating a new team
-        self.repository.create_team(Team(name='Team A', tribeId=1))
+        await repository.create_async(Team(name="Team A", tenant_id=self.tenant.id))
 
-        team = self.session.query(Team).filter_by(name='Team A').first()
-
+        team = await repository.find_one_async(Team.name == "Team A")
         self.assertIsNotNone(team)
-        self.assertEqual(team.name, 'Team A')
+        self.assertEqual(team.name, "Team A")
 
-    def test_get_team(self):
+    async def test_get_team(self):
+        repository = TeamRepository(self.session)
         # Test retrieving an existing team
-        team = self.repository.create_team(Team(name='Team B', tribeId=1))
+        team = await repository.create_async(Team(name="Team B", tenant_id=1))
 
-        retrieved_team = self.repository.get_team(team.id)
+        retrieved_team = await repository.get_async(team.id, tenant_id=self.tenant.id)
         self.assertIsNotNone(retrieved_team)
-        self.assertEqual(retrieved_team.name, 'Team B')
+        self.assertEqual(retrieved_team.name, "Team B")
 
-    def test_update_team(self):
+    async def test_update_async(self):
+        repository = TeamRepository(self.session)
         # Test updating an existing team
-        team = self.repository.create_team(Team(name='Team C', tribeId=1))
+        team = await repository.create_async(Team(name="Team C", tenant_id=1))
 
-        self.repository.update_team(team.id, 'Team D')
+        target_value = "Team D"
+        team.name = target_value
 
-        updated_team = self.session.query(Team).filter_by(id=team.id).first()
+        await repository.update_async(team)
+
+        updated_team = await repository.find_one_async(Team.name == target_value)
         self.assertIsNotNone(updated_team)
-        self.assertEqual(updated_team.name, 'Team D')
 
-    def test_delete_team(self):
+    async def test_delete_team(self):
+        repository = TeamRepository(self.session)
         # Test deleting an existing team
-        team = Team(name='Team E', tribeId=1)
-        self.session.add(team)
-        self.session.commit()
+        team = Team(name="Team E", tenant_id=self.tenant.id)
+        await repository.create_async(team)
 
-        self.repository.delete_team(team.id)
+        await repository.delete_async(item_id=team.id, tenant_id=self.tenant.id)
 
-        deleted_team = self.session.query(Team).filter_by(id=team.id).first()
+        deleted_team = await repository.find_one_async(Team.id == team.id)
+
         self.assertIsNone(deleted_team)
 
-if __name__ == '__main__':
-    unittest.main()
+    async def test_find_all_teams(self):
+        repository = TeamRepository(self.session)
+        await self.session.execute(delete(Team))
+        await self.session.commit()
+
+        # Test finding all teams
+        for i in range(20):
+            team = Team(name=f"Team {i}", tenant_id=self.tenant.id)
+            await repository.create_async(team)
+
+        result = await repository.list_all_async(tenant_id=1, limit=5)
+        self.assertEqual(len(result.data), 5)
+        self.assertIsNotNone(result.after)
+        self.assertIsNone(result.before)
+
+        result = await repository.list_all_async(tenant_id=1, limit=12, after=result.after)
+        self.assertEqual(len(result.data), 12)
+        self.assertIsNotNone(result.after)
+        self.assertIsNotNone(result.before)
+
+        result = await repository.list_all_async(tenant_id=1, limit=12, after=result.after)
+        self.assertEqual(len(result.data), 3)
+        self.assertIsNone(result.after)
+        self.assertIsNotNone(result.before)
+
+
+if __name__ == "__main__":
+    asyncio.run(unittest.main())

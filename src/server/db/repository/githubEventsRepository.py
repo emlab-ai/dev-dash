@@ -14,13 +14,20 @@ class GithubEventsRepository:
         pass
 
     def insert(
-        self, tenant_id: int, event_type: str, delivery_id: str, received_at: datetime, data, failed=False, error_text=None
+        self,
+        tenant_id: int,
+        event_type: str,
+        delivery_id: str,
+        received_at: datetime.datetime,
+        data,
+        failed=False,
+        error_text: str = None,
     ):
         response = table.put_item(
             Item={
                 "tenant_id": str(tenant_id),
                 "event_type": event_type,
-                "received_at": received_at,
+                "received_at": str(received_at),
                 "delivery_id": delivery_id,
                 "data": data,
                 "failed": failed,
