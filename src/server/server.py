@@ -1,5 +1,6 @@
 import os
 import uuid
+from mangum import Mangum
 import uvicorn
 from app_auth import validate_token
 from app_context import (
@@ -148,6 +149,10 @@ def serve_react_app(path: str):
         return {"error": "API endpoint not found"}, 404
 
     return send_from_directory("static/dist", "index.html")
+
+
+# Lambda handler
+handler = Mangum(app)
 
 
 if __name__ == "__main__":

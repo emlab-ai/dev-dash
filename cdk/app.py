@@ -17,7 +17,10 @@ from aws_cdk import (
     aws_elasticloadbalancingv2_targets as targets,
     aws_dynamodb as dynamodb,
     aws_secretsmanager as secretsmanager,
+    aws_lambda as _lambda,
     aws_logs as logs,
+    aws_apigatewayv2 as apigwv2,
+    aws_apigatewayv2_integrations as integrations,
     Stack,
     Duration,
     CfnOutput,
@@ -39,45 +42,45 @@ class EmlabCdkStack(Stack):
             repository_arn="arn:aws:ecr:eu-west-2:834803522181:repository/emlab",
         )
 
-        vpc = ec2.Vpc(
-            self,
-            "EmlabVpc",
-            max_azs=2,
-            cidr="10.0.0.0/16",
-            gateway_endpoints={
-                "S3": ec2.GatewayVpcEndpointOptions(
-                    service=ec2.GatewayVpcEndpointAwsService.S3
-                )
-            },
-            subnet_configuration=[
-                ec2.SubnetConfiguration(
-                    name="public",
-                    cidr_mask=24,
-                    reserved=False,
-                    subnet_type=ec2.SubnetType.PUBLIC,
-                ),
-            ],
-            enable_dns_hostnames=True,
-            enable_dns_support=True,
-            nat_gateways=1,
-        )
+        # vpc = ec2.Vpc(
+        #     self,
+        #     "EmlabVpc",
+        #     max_azs=2,
+        #     cidr="10.0.0.0/16",
+        #     gateway_endpoints={
+        #         "S3": ec2.GatewayVpcEndpointOptions(
+        #             service=ec2.GatewayVpcEndpointAwsService.S3
+        #         )
+        #     },
+        #     subnet_configuration=[
+        #         ec2.SubnetConfiguration(
+        #             name="public",
+        #             cidr_mask=24,
+        #             reserved=False,
+        #             subnet_type=ec2.SubnetType.PUBLIC,
+        #         ),
+        #     ],
+        #     enable_dns_hostnames=True,
+        #     enable_dns_support=True,
+        #     nat_gateways=1,
+        # )
 
-        vpc.add_interface_endpoint(
-            "ECR",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR,
-        )
-        vpc.add_interface_endpoint(
-            "ECRDocker",
-            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
-        )
-        vpc.add_interface_endpoint(
-            "CloudWatchLogsEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-        )
-        vpc.add_interface_endpoint(
-            "KMS",
-            service=ec2.InterfaceVpcEndpointAwsService.KMS,
-        )
+        # vpc.add_interface_endpoint(
+        #     "ECR",
+        #     service=ec2.InterfaceVpcEndpointAwsService.ECR,
+        # )
+        # vpc.add_interface_endpoint(
+        #     "ECRDocker",
+        #     service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+        # )
+        # vpc.add_interface_endpoint(
+        #     "CloudWatchLogsEndpoint",
+        #     service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+        # )
+        # vpc.add_interface_endpoint(
+        #     "KMS",
+        #     service=ec2.InterfaceVpcEndpointAwsService.KMS,
+        # )
 
         # # VPC Interface Endpoints
         # ec2.InterfaceVpcEndpoint(
@@ -98,19 +101,19 @@ class EmlabCdkStack(Stack):
         #     ),
         # )
 
-        my_security_group = ec2.SecurityGroup(
-            self,
-            "PublicSecurityGroup",
-            vpc=vpc,
-            description="Allow all traffic",
-            allow_all_outbound=True,
-        )
-        my_security_group.add_ingress_rule(
-            ec2.Peer.any_ipv4(), ec2.Port.tcp(5432), "Allow all traffic"
-        )
+        # my_security_group = ec2.SecurityGroup(
+        #     self,
+        #     "PublicSecurityGroup",
+        #     vpc=vpc,
+        #     description="Allow all traffic",
+        #     allow_all_outbound=True,
+        # )
+        # my_security_group.add_ingress_rule(
+        #     ec2.Peer.any_ipv4(), ec2.Port.tcp(5432), "Allow all traffic"
+        # )
 
         # Define an ECS cluster
-        cluster = ecs.Cluster(self, "EmlabCluster", vpc=vpc)
+        # cluster = ecs.Cluster(self, "EmlabCluster", vpc=vpc)
 
         # Domain configuration
         domain_name = "emlab.ai"
@@ -123,29 +126,29 @@ class EmlabCdkStack(Stack):
             validation=acm.CertificateValidation.from_dns(),  # Automatically validate the certificate using DNS
         )
 
-        # Create a security group for the database
-        db_security_group = ec2.SecurityGroup(
-            self,
-            "DbSecurityGroup",
-            vpc=vpc,
-            description="Allow inbound traffic on port 5432 from the service security group",
-            allow_all_outbound=True,
-        )
+        # # Create a security group for the database
+        # db_security_group = ec2.SecurityGroup(
+        #     self,
+        #     "DbSecurityGroup",
+        #     vpc=vpc,
+        #     description="Allow inbound traffic on port 5432 from the service security group",
+        #     allow_all_outbound=True,
+        # )
 
-        # Define the task definition
-        task_definition = ecs.FargateTaskDefinition(
-            self, "WebServer", memory_limit_mib=1024, cpu=512
-        )
+        # # Define the task definition
+        # task_definition = ecs.FargateTaskDefinition(
+        #     self, "WebServer", memory_limit_mib=1024, cpu=512
+        # )
 
-        # Add a container to the task definition
+        # # Add a container to the task definition
 
-        web_server_image = ecr_assets.DockerImageAsset(
-            self,
-            "WebServerImage",
-            directory="../src",
-            file="./build/web/Dockerfile",
-            platform=ecr_assets.Platform.LINUX_AMD64,
-        )
+        # web_server_image = ecr_assets.DockerImageAsset(
+        #     self,
+        #     "WebServerImage",
+        #     directory="../src",
+        #     file="./build/web/Dockerfile",
+        #     platform=ecr_assets.Platform.LINUX_AMD64,
+        # )
 
         db_secret_arn = "arn:aws:secretsmanager:eu-west-2:834803522181:secret:rds!db-a90903e6-e624-477c-b17e-66e7bd4dce76-b5ZhUM"
         github_secret_arn = "arn:aws:secretsmanager:eu-west-2:834803522181:secret:prod/githubcert-ybijhW"
@@ -161,77 +164,71 @@ class EmlabCdkStack(Stack):
             self, "gemini_secret_arn", gemini_secret_arn
         )
 
-        container = task_definition.add_container(
-            "EmlabContainer",
-            image=ecs.ContainerImage.from_docker_image_asset(web_server_image),
-            logging=ecs.LogDriver.aws_logs(
-                stream_prefix="WebServer",
-                log_group=logs.LogGroup(
-                    self,
-                    "WebServerLogGroup",
-                    log_group_name="/aws/ecs/WebServer",
-                    retention=logs.RetentionDays.ONE_WEEK,
-                    removal_policy=cdk.RemovalPolicy.DESTROY,
-                ),
-            ),
-            environment={
-                "DB_SQL_SECRET_ARN": db_secret_arn,
-                "AUTH0_DOMAIN": "emlab.uk.auth0.com",
-                "AUTH0_CLIENTID": "3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq",
-            },
-        )
-
-        container.add_port_mappings(ecs.PortMapping(container_port=8080))
-
-        # Application Load Balanced Fargate Service
-        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
-            self,
-            "EmlabServer",
-            cluster=cluster,
-            desired_count=1,
-            task_definition=task_definition,
-            public_load_balancer=True,
-            assign_public_ip=True
-        )
-
-        fargate_service.target_group.configure_health_check(
-            path="/health",
-            interval=Duration.seconds(30),
-            timeout=Duration.seconds(5),
-            healthy_threshold_count=2,
-            unhealthy_threshold_count=2,
-        )
-
-        # Add HTTPS listener
-        fargate_service.load_balancer.add_listener(
-            "HttpsListener2",
-            port=443,
-            certificates=[certificate],
-            default_action=elbv2.ListenerAction.forward([fargate_service.target_group]),
-        )
-
-        db_security_group.add_ingress_rule(
-            peer=fargate_service.service.connections.security_groups[0],
-            connection=ec2.Port.tcp(5432),
-        )
-
-        db_secret.grant_read(fargate_service.task_definition.task_role)
-
-        # fargate_service.task_definition.task_role.add_to_policy(
-        #     iam.PolicyStatement(
-        #         actions=["secretsmanager:GetSecretValue"], resources=[db_secret_arn]
-        #     )
+        # container = task_definition.add_container(
+        #     "EmlabContainer",
+        #     image=ecs.ContainerImage.from_docker_image_asset(web_server_image),
+        #     logging=ecs.LogDriver.aws_logs(
+        #         stream_prefix="WebServer",
+        #         log_group=logs.LogGroup(
+        #             self,
+        #             "WebServerLogGroup",
+        #             log_group_name="/aws/ecs/WebServer",
+        #             retention=logs.RetentionDays.ONE_WEEK,
+        #             removal_policy=cdk.RemovalPolicy.DESTROY,
+        #         ),
+        #     ),
+        #     environment={
+        #         "DB_SQL_SECRET_ARN": db_secret_arn,
+        #         "AUTH0_DOMAIN": "emlab.uk.auth0.com",
+        #         "AUTH0_CLIENTID": "3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq",
+        #     },
         # )
 
-        # AutoScaling policy
-        scaling = fargate_service.service.auto_scale_task_count(max_capacity=1)
+        # container.add_port_mappings(ecs.PortMapping(container_port=8080))
 
-        scaling.scale_on_cpu_utilization(
-            "CpuScaling",
-            target_utilization_percent=50,
-            scale_in_cooldown=Duration.seconds(60),
-            scale_out_cooldown=Duration.seconds(60),
-        )
+        # Application Load Balanced Fargate Service
+        # fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+        #     self,
+        #     "EmlabServer",
+        #     cluster=cluster,
+        #     desired_count=1,
+        #     task_definition=task_definition,
+        #     public_load_balancer=True,
+        #     assign_public_ip=True,
+        # )
+
+        # fargate_service.target_group.configure_health_check(
+        #     path="/health",
+        #     interval=Duration.seconds(30),
+        #     timeout=Duration.seconds(5),
+        #     healthy_threshold_count=2,
+        #     unhealthy_threshold_count=2,
+        # )
+
+        # Add HTTPS listener
+        # fargate_service.load_balancer.add_listener(
+        #     "HttpsListener2",
+        #     port=443,
+        #     certificates=[certificate],
+        #     default_action=elbv2.ListenerAction.forward([fargate_service.target_group]),
+        # )
+
+        # db_security_group.add_ingress_rule(
+        #     peer=fargate_service.service.connections.security_groups[0],
+        #     connection=ec2.Port.tcp(5432),
+        # )
+
+        # db_secret.grant_read(fargate_service.task_definition.task_role)
+
+        # AutoScaling policy
+        # scaling = fargate_service.service.auto_scale_task_count(max_capacity=1)
+
+        # scaling.scale_on_cpu_utilization(
+        #     "CpuScaling",
+        #     target_utilization_percent=50,
+        #     scale_in_cooldown=Duration.seconds(60),
+        #     scale_out_cooldown=Duration.seconds(60),
+        # )
 
         # Import the existing DynamoDB table and grant read/write permissions
         emlab_githubevents_table = dynamodb.Table.from_table_name(
@@ -240,11 +237,11 @@ class EmlabCdkStack(Stack):
             table_name="emlab_githubevents",  # Replace with your table name
         )
 
-        emlab_githubevents_table.grant_read_write_data(
-            fargate_service.task_definition.task_role
-        )
-        github_secret.grant_read(fargate_service.task_definition.task_role)
-        gemini_secret.grant_read(fargate_service.task_definition.task_role)
+        # emlab_githubevents_table.grant_read_write_data(
+        #     fargate_service.task_definition.task_role
+        # )
+        # github_secret.grant_read(fargate_service.task_definition.task_role)
+        # gemini_secret.grant_read(fargate_service.task_definition.task_role)
 
         # github_import_stream = kinesis.Stream(
         #     self, "github_import", stream_name="github_import"
@@ -257,13 +254,13 @@ class EmlabCdkStack(Stack):
         # )
 
         # Define the md64 image asset
-        # lamda_image = ecr_assets.DockerImageAsset(
-        #     self,
-        #     "LambdaImage",
-        #     directory="../src",
-        #     file="./build/lambda/Dockerfile",
-        #     platform=ecr_assets.Platform.LINUX_AMD64,
-        # )
+        lamda_image = ecr_assets.DockerImageAsset(
+            self,
+            "LambdaImage",
+            directory="../src",
+            file="./build/lambda/Dockerfile",
+            platform=ecr_assets.Platform.LINUX_AMD64,
+        )
 
         # Create the Lambda function using the Docker image
         # process_github_import_lambda_function = _lambda.DockerImageFunction(
@@ -393,21 +390,64 @@ class EmlabCdkStack(Stack):
         #     kinesis_events_event_source
         # )
 
-        # dynamodb_usertable = ddb.Table(
-        #     self,
-        #     "emlab_user_profile",
-        #     partition_key=ddb.Attribute(
-        #         name="tid",  # name of the column, tenant_id+user_id
-        #         type=ddb.AttributeType.STRING,
-        #     ),
-        #     removal_policy=RemovalPolicy.DESTROY,  # NOT recommended for production
-        # )
+        web_lambda_function = _lambda.DockerImageFunction(
+            self,
+            "WebAppLambdaFunction",
+            code=_lambda.DockerImageCode.from_ecr(
+                repository=lamda_image.repository,
+                tag=lamda_image.image_tag,
+                cmd=["server.handler"],
+            ),
+            memory_size=512,
+            reserved_concurrent_executions=3,
+            timeout=Duration.seconds(15),
+            environment={
+                "DB_SQL_SECRET_ARN": db_secret_arn,
+                "AUTH0_DOMAIN": "emlab.uk.auth0.com",
+                "AUTH0_CLIENTID": "3Dl2QwlW35gS8oQ6xXiG0nzCyy1g1GAq",
+            },
+        )
+
+        web_lambda_function.role.add_to_policy(
+            iam.PolicyStatement(
+                actions=["secretsmanager:GetSecretValue"],
+                resources=[
+                    db_secret_arn,
+                    github_secret_arn,
+                    gemini_secret_arn,
+                ],
+            )
+        )
+
+        emlab_githubevents_table.grant_read_write_data(web_lambda_function)
+
+        domain = apigwv2.DomainName(
+            self,
+            "EmlabDomain",
+            domain_name=domain_name,
+            certificate=certificate,
+        )
+
+        http_api = apigwv2.HttpApi(
+            self,
+            "FastAPIHttpApi",
+            default_integration=integrations.HttpLambdaIntegration(
+                "LambdaIntegration", handler=web_lambda_function
+            ),
+            default_domain_mapping=apigwv2.DomainMappingOptions(domain_name=domain),
+        )
 
         CfnOutput(
             self,
-            "LoadBalancerDNS",
-            value=fargate_service.load_balancer.load_balancer_dns_name,
+            "HTTPApiUrl",
+            value=http_api.api_endpoint,
         )
+
+        # CfnOutput(
+        #     self,
+        #     "LoadBalancerDNS",
+        #     value=fargate_service.load_balancer.load_balancer_dns_name,
+        # )
 
 
 app = cdk.App()
