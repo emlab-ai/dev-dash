@@ -26,6 +26,7 @@ from utils import log_exceptions
 from services.event_helpers import (
     issue_comment_to_model,
     issue_to_model,
+    parse_date_time,
     pull_request_event_to_model,
     pull_request_review_comment_to_model,
     pull_request_review_to_model,
@@ -241,7 +242,7 @@ class GithubWebhookService:
         prRecord = pull_request_event_to_model(tenant, data)
         logger.info(f"Processing pull request {prRecord.url}")
 
-        prRecord.first_commit_date = firstCommitDate
+        prRecord.first_commit_date = parse_date_time(firstCommitDate)
         prRecord.first_commit_message = firstCommitMessage
 
         settinsRepo = AsyncRepository(RepoSettings, self.session)
@@ -297,7 +298,7 @@ class GithubWebhookService:
             logger.info(
                 f"Creating PR review request for tenant {tenant.id} and repository {prRecord.repository_id}"
             )
-            aiAgetService = AiAgentService(self.session)
+            aiAgetService = AiAgentService(self.session, True)
             await aiAgetService.create_pr_review_request_async(tenant, org, prRecord.id)
 
         if not (action == "opened"):
@@ -359,6 +360,7 @@ class GithubWebhookService:
     async def _calculate_pr_metrics_async(
         self, tenant: Tenant, pr: PullRequest
     ):
+        logger.info(f"Calculating PR metrics for PR {pr.id}")
         if pr.state != "merged":
             return
 

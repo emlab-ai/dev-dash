@@ -5,6 +5,7 @@
 
 import boto3
 from botocore.exceptions import ClientError
+from app_logger import logger
 
 
 def get_aws_secret(secret_name, region_name):
@@ -16,6 +17,7 @@ def get_aws_secret(secret_name, region_name):
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
+        logger.error(f"Failed to retrieve secret {secret_name}")
         # For a list of exceptions thrown, see
         # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         raise e

@@ -93,9 +93,10 @@ async def testrun():
     async with Session() as session:
         ws = GithubWebhookService(session, inprocess=True)
         er = GithubEventsRepository()
-        event = er.get(1, "3cdb19c2-bee3-11ef-8be6-708ffbfa36b7")
+        id = "00376c10-bd20-11ef-9ddc-fe3533160c30"
+        event = er.get(1, id)
         data = event['data']
-        await ws.record_event_async("issue_comment", "3cdb19c2-bee3-11ef-8be6-708ffbfa36b7", data)
+        await ws.record_event_async("pull_request", id, data)
         print("done")
 
 

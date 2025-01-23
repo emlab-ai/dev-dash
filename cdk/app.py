@@ -399,7 +399,7 @@ class EmlabCdkStack(Stack):
                 cmd=["server.handler"],
             ),
             memory_size=512,
-            reserved_concurrent_executions=3,
+            reserved_concurrent_executions=6,
             timeout=Duration.seconds(15),
             environment={
                 "DB_SQL_SECRET_ARN": db_secret_arn,

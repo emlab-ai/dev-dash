@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from db.model.pagedResult import PagedResult
+from app_logger import logger
 
 
 class Entity(Protocol):
@@ -192,6 +193,7 @@ class AsyncRepository(Generic[T]):
             await self.session.merge(item)
             if commit:
                 await self.session.commit()
+
         return item
 
     async def get_async(

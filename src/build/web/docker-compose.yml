@@ -2,8 +2,8 @@ services:
   app:
     build:
       context: ../../
-      dockerfile: ./build/web/Dockerfile  
-    platform: linux/amd64  
+      dockerfile: ./build/lambda/Dockerfile
+    platform: linux/amd64
     environment:
       - SQL_DATABASE_URI=postgresql://postgres:bonaventura@host.docker.internal:5432/emlab_ai
       - AWS_ACCESS_KEY_ID=AKIA4EXRK3KCT2QNQ66K

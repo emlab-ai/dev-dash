@@ -3,6 +3,7 @@ import uuid
 from mangum import Mangum
 import uvicorn
 from app_auth import validate_token
+from app_logger import logger
 from app_context import (
     context_session,
     context_trace_id,
@@ -32,6 +33,7 @@ from contextlib import asynccontextmanager
 # import tracemalloc
 # import gc
 
+logger.info("Starting server")
 app = FastAPI()
 # Mount the static folder
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -45,8 +47,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+logger.info("Setting up SQL engine")
 Session = setup_sql_engine()
 AsyncSession = setup_async_sql_engine()
+logger.info("SQL engine setup complete")
+
+logger.info("Setting up Github app")
 setup_github_app()
 
 

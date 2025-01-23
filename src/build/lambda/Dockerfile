@@ -1,28 +1,29 @@
 # Stage 0: Create a reusable base image for Python with necessary tools
-FROM public.ecr.aws/lambda/python:3.13 as base
+FROM public.ecr.aws/lambda/python:3.12 as base
 
+# RUN microdnf install -y \
+#     gcc \
+#     gcc-c++ \
+#     python3-devel \
+#     libffi-devel \
+#     openssl-devel \
+#     && microdnf clean all
 
-RUN microdnf install -y \
-    gcc \
-    gcc-c++ \
-    python3-devel \
-    libffi-devel \
-    openssl-devel \
-    && microdnf clean all
-
-# RUN geos-config --cflags
-ENV CFLAGS="-Wno-error=incompatible-pointer-types"
+# # RUN geos-config --cflags
+# ENV CFLAGS="-Wno-error=incompatible-pointer-types"
 
 RUN pip install --upgrade pip
 RUN pip install poetry
+RUN poetry self add poetry-plugin-export
 
 WORKDIR /app
 # Copy the requirements file for Python dependencies
 # COPY ./server/requirements.txt /app/requirements.txt
 COPY ./pyproject.toml /app/pyproject.toml
 COPY ./poetry.lock  /app/poetry.lock
+RUN poetry self update
 
-RUN poetry export --without-hashes --format requirements.txt --output  /app/requirements.txt
+RUN poetry export --without-hashes --format requirements.txt --output /app/requirements.txt
 # Install Python dependencies in the base image
 RUN pip install --no-cache-dir -r  /app/requirements.txt
 

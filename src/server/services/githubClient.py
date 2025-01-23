@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from typing import Optional
+from app_logger import logger
 from aws.secret import get_aws_secret
 import jwt
 import time
@@ -9,7 +10,7 @@ import app_config
 import requests
 from cachetools import TTLCache
 from utils import log_exceptions
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # global variables
 private_key: Optional[str] = None
@@ -23,7 +24,7 @@ def setup_github_app():
     global private_key
 
     secret_name = "prod/githubcert"
-
+    logger.info("Setting up GitHub App client")
     certStr = get_aws_secret(secret_name, app_config.AWS_REGION)
 
     app_id = app_config.GITHUB_APP_ID
@@ -31,6 +32,8 @@ def setup_github_app():
     private_key = serialization.load_pem_private_key(
         certStr.encode(), password=None, backend=default_backend()
     )
+
+    logger.info("GitHub App client setup complete")
 
 
 def get_app_access_token() -> str:
@@ -42,16 +45,21 @@ def get_app_access_token() -> str:
 
     if not private_key:
         setup_github_app()
+    time_now = int(datetime.now(timezone.utc).timestamp())
 
-    if token and token_generated_time and (time.time() - token_generated_time) < 540:
+    logger.info(f"Time now: {time_now}")
+
+    if token and token_generated_time and (time_now - token_generated_time) < 540:
+        logger.info("Using cached token")
         return token
 
-    time_now = float(time.time())
-    payload = {"iat": time_now, "exp": time_now + (10 * 60), "iss": app_id}
+    logger.info("Generating new token")
+    payload = {"iat": time_now, "exp": time_now + 600, "iss": app_id}
 
     assert private_key is not None
     token = jwt.encode(payload, private_key, algorithm="RS256")
     token_generated_time = time_now
+
     return token
 
 
@@ -67,6 +75,9 @@ def get_installation_access_token(installation_id: str) -> str:
         f"https://api.github.com/app/installations/{installation_id}/access_tokens",
         headers=headers,
     )
+
+    if not response.ok:
+        raise Exception(f"Error fetching access token from GitHub: {response.text}")
 
     access_token = response.json()["token"]
 

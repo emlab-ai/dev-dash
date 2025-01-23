@@ -30,6 +30,8 @@ RULE4 [ERROR]: Reference to the ticket that was solved. Ticket reference format 
     this criteria is not met, example: CPP-xx, xx is not number.
 RULE5 [WARNING]: Outcome of the test results.
 RULE6 [INFO]: Any additional information that might be useful for the reviewer.
+RULE7 [ERROR]: If description has a checklist, it should be marked as [x], not [ ] or [].
+
 
 Make a summarry.
 Evaluate quality of description 1-10.
@@ -67,8 +69,11 @@ Example:
 def _build_markdown_review_comment(reviewObject):
     summary = reviewObject["summary"]
     rules = reviewObject["rules"]
+    score = reviewObject["quality_value"]
 
     comment = f"## Summary\n\n{summary}\n\n## Rules\n\n"
+
+    comment += f"Score: {score}/10\n\n"
 
     comment += "| Status | Rule | Message |\n"
     comment += "|--------|------|---------|\n"
